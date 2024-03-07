@@ -13,6 +13,7 @@ import (
 func SetupApiRequestHeader(info *common.RelayInfo, c *gin.Context, req *http.Request) {
 	req.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
 	req.Header.Set("Accept", c.Request.Header.Get("Accept"))
+	req.Header.Set("User-Agent", c.Request.Header.Get("User-Agent"))
 	if info.IsStream && c.Request.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "text/event-stream")
 	}
