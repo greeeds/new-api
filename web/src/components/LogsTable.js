@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {Label} from 'semantic-ui-react';
-import {API, copy, isAdmin, showError, showSuccess, timestamp2string} from '../helpers';
+import {API, copy, isAdmin, isRoot, showError, showSuccess, timestamp2string} from '../helpers';
 
 import {Table, Avatar, Tag, Form, Button, Layout, Select, Popover, Modal, Spin, Space} from '@douyinfe/semi-ui';
 import {ITEMS_PER_PAGE} from '../constants';
@@ -225,6 +225,16 @@ const LogsTable = () => {
                     {text}
                 </Paragraph>
             }
+        },
+        {
+            title: '参数',
+            dataIndex: 'body',
+            className: isRoot() ? 'tableShow' : 'tableHiddle',
+            render: (text, record, index) => {
+                return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 240 } } } }} style={{ maxWidth: 240}}>
+                    {text}
+                </Paragraph>
+            },
         }
     ];
 
