@@ -16,6 +16,7 @@ const SystemSetting = () => {
         SMTPAccount: '',
         SMTPFrom: '',
         SMTPToken: '',
+        SMTPAuthLoginEnabled: '',
         ServerAddress: '',
         EpayId: '',
         EpayKey: '',
@@ -87,6 +88,7 @@ const SystemSetting = () => {
             case 'TurnstileCheckEnabled':
             case 'EmailDomainRestrictionEnabled':
             case 'RegisterEnabled':
+            case 'SMTPAuthLoginEnabled':
                 value = inputs[key] === 'true' ? 'false' : 'true';
                 break;
             default:
@@ -121,7 +123,7 @@ const SystemSetting = () => {
         }
         if (
             name === 'Notice' ||
-            name.startsWith('SMTP') ||
+            (name.startsWith('SMTP') && !name.endsWith('Enabled')) ||
             name === 'ServerAddress' ||
             name === 'EpayId' ||
             name === 'EpayKey' ||
@@ -535,6 +537,12 @@ const SystemSetting = () => {
                             autoComplete='new-password'
                             checked={inputs.RegisterEnabled === 'true'}
                             placeholder='敏感信息不会发送到前端显示'
+                        />
+                        <Form.Checkbox
+                            label='使用 SMTP LOGIN 认证方式'
+                            name='SMTPAuthLoginEnabled'
+                            onChange={handleInputChange}
+                            checked={inputs.SMTPAuthLoginEnabled === 'true'}
                         />
                     </Form.Group>
                     <Form.Button onClick={submitSMTP}>保存 SMTP 设置</Form.Button>

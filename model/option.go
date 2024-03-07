@@ -88,6 +88,7 @@ func InitOptionMap() {
 	common.OptionMap["DataExportInterval"] = strconv.Itoa(common.DataExportInterval)
 	common.OptionMap["DataExportDefaultTime"] = common.DataExportDefaultTime
 	common.OptionMap["DefaultCollapseSidebar"] = strconv.FormatBool(common.DefaultCollapseSidebar)
+	common.OptionMap["SMTPAuthLoginEnabled"] = strconv.FormatBool(common.SMTPAuthLoginEnabled)
 
 	common.OptionMapRWMutex.Unlock()
 	loadOptionsFromDatabase()
@@ -181,6 +182,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.DataExportEnabled = boolValue
 		case "DefaultCollapseSidebar":
 			common.DefaultCollapseSidebar = boolValue
+		case "SMTPAuthLoginEnabled":
+			common.SMTPAuthLoginEnabled = boolValue
 		}
 	}
 	switch key {
