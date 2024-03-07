@@ -151,10 +151,8 @@ const TokensTable = () => {
                         <Button theme="light" style={{ color: 'rgba(var(--semi-teal-7), 1)' }} onClick={()=>{onOpenLink('next', record.key)}}>聊天</Button>
                         <Dropdown trigger="click" position="bottomRight" menu={
                             [
-                                {node: 'item', key: 'next', disabled: !localStorage.getItem('chat_link'), name: 'ChatGPT Next Web', onClick: () => {onOpenLink('next', record.key)}},
-                                {node: 'item', key: 'next-mj', disabled: !localStorage.getItem('chat_link2'), name: 'ChatGPT Web & Midjourney', onClick: () => {onOpenLink('next-mj', record.key)}},
-                                {node: 'item', key: 'ama', name: 'AMA 问天（BotGem）', onClick: () => {onOpenLink('ama', record.key)}},
-                                {node: 'item', key: 'opencat', name: 'OpenCat', onClick: () => {onOpenLink('opencat', record.key)}},
+                                {node: 'item', key: 'lobe', disabled: !localStorage.getItem('chat_link'), name: 'Lobe Chat', onClick: () => {onOpenLink('lobe', record.key)}},
+                                {node: 'item', key: 'chat-next-web', disabled: !localStorage.getItem('chat_link2'), name: 'ChatGPT Next Web', onClick: () => {onOpenLink('chat-next-web', record.key)}},
                             ]
                         }
                         >
@@ -338,26 +336,23 @@ const TokensTable = () => {
             serverAddress = window.location.origin;
         }
         let encodedServerAddress = encodeURIComponent(serverAddress);
-        const chatLink = localStorage.getItem('chat_link');
-        const mjLink = localStorage.getItem('chat_link2');
+        const lobeLink = localStorage.getItem('chat_link');
+        const nextWebLink = localStorage.getItem('chat_link2');
         let defaultUrl;
 
-        if (chatLink) {
-            defaultUrl = chatLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+        if (lobeLink) {
+            defaultUrl = lobeLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
         }
         let url;
         switch (type) {
-            case 'ama':
-                url = `ama://set-api-key?server=${encodedServerAddress}&key=sk-${key}`;
+            case 'lobe':
+                url = `${lobeLink}?domain=${encodedServerAddress}&key=sk-${key}`;
                 break;
-            case 'opencat':
-                url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
-                break;
-            case 'next-mj':
-                url =  mjLink + `/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
+            case 'chat-next-web':
+                url = `${nextWebLink}?domain=${encodedServerAddress}&key=sk-${key}`;
                 break;
             default:
-                if (!chatLink) {
+                if (!lobeLink) {
                     showError('管理员未设置聊天链接')
                     return;
                 }
