@@ -488,7 +488,9 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 					bodyContent = string(jsonData)
 				}
 
-				logModel = imageModel + "[" + logModel + "]"
+				if imageModel != logModel {
+					logModel = imageModel + "[" + logModel + "]"
+				}
 				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, 0, false, bodyContent)
 				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
 				channelId := c.GetInt("channel_id")

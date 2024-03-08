@@ -186,7 +186,7 @@ func AudioHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 				tokenName := c.GetString("token_name")
 				logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
 				logModel := audioRequest.Model
-				if len(audioRequest.SourceModel) > 0 {
+				if len(audioRequest.SourceModel) > 0 && audioRequest.SourceModel != audioRequest.Model {
 					logModel += "[" + audioRequest.SourceModel + "]"
 				}
 				model.RecordConsumeLog(ctx, userId, channelId, promptTokens, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, "")

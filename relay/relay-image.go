@@ -200,7 +200,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusC
 				}
 
 				logModel := imageRequest.Model
-				if len(imageRequest.SourceModel) > 0 {
+				if len(imageRequest.SourceModel) > 0 && imageRequest.SourceModel != imageRequest.Model {
 					logModel += "[" + imageRequest.SourceModel + "]"
 				}
 				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, bodyContent)

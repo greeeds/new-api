@@ -293,7 +293,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 		logModel = "gpt-4-gizmo-*"
 		logContent += fmt.Sprintf("，模型 %s", textRequest.Model)
 	}
-	if len(textRequest.SourceModel) > 0 {
+	if len(textRequest.SourceModel) > 0 && textRequest.SourceModel != textRequest.Model {
 		logModel += "[" + textRequest.SourceModel + "]"
 	}
 	var bodyContent string
