@@ -13,6 +13,7 @@ func GetAllLogs(c *gin.Context) {
 	if p < 0 {
 		p = 0
 	}
+	userId := c.GetInt("id")
 	logType, _ := strconv.Atoi(c.Query("type"))
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
@@ -27,6 +28,9 @@ func GetAllLogs(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if !model.IsRoot(userId) {
+		logBody(logs)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -55,6 +59,7 @@ func GetUserLogs(c *gin.Context) {
 		})
 		return
 	}
+	logBody(logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -65,6 +70,7 @@ func GetUserLogs(c *gin.Context) {
 
 func SearchAllLogs(c *gin.Context) {
 	keyword := c.Query("keyword")
+	userId := c.GetInt("id")
 	logs, err := model.SearchAllLogs(keyword)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -72,6 +78,9 @@ func SearchAllLogs(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if !model.IsRoot(userId) {
+		logBody(logs)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -92,6 +101,7 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
+	logBody(logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -102,6 +112,7 @@ func SearchUserLogs(c *gin.Context) {
 
 func GetLogByKey(c *gin.Context) {
 	key := c.Query("key")
+	userId := c.GetInt("id")
 	logs, err := model.GetLogByKey(key)
 	if err != nil {
 		c.JSON(200, gin.H{
@@ -109,6 +120,9 @@ func GetLogByKey(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if !model.IsRoot(userId) {
+		logBody(logs)
 	}
 	c.JSON(200, gin.H{
 		"success": true,
@@ -185,4 +199,10 @@ func DeleteHistoryLogs(c *gin.Context) {
 		"data":    count,
 	})
 	return
+}
+
+func logBody(logs []*model.Log) {
+	for i := range logs {
+		logs[i].Body = ""
+	}
 }

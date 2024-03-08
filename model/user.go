@@ -344,6 +344,19 @@ func IsAdmin(userId int) bool {
 	return user.Role >= common.RoleAdminUser
 }
 
+func IsRoot(userId int) bool {
+	if userId == 0 {
+		return false
+	}
+	var user User
+	err := DB.Where("id = ?", userId).Select("role").Find(&user).Error
+	if err != nil {
+		common.SysError("no such user " + err.Error())
+		return false
+	}
+	return user.Role >= common.RoleRootUser
+}
+
 func IsUserEnabled(userId int) (bool, error) {
 	if userId == 0 {
 		return false, errors.New("user id is empty")
