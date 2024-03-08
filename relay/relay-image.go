@@ -82,6 +82,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusC
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[imageRequest.Model] != "" {
+			imageRequest.SourceModel = imageRequest.Model
 			imageRequest.Model = modelMap[imageRequest.Model]
 			isModelMapped = true
 		}
@@ -197,7 +198,12 @@ func RelayImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusC
 				if err == nil {
 					bodyContent = string(jsonData)
 				}
-				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, imageRequest.Model, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, bodyContent)
+
+				logModel := imageRequest.Model
+				if len(imageRequest.SourceModel) > 0 {
+					logModel += "[" + imageRequest.SourceModel + "]"
+				}
+				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, bodyContent)
 				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
 				channelId := c.GetInt("channel_id")
 				model.UpdateChannelUsedQuota(channelId, quota)

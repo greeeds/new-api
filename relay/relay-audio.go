@@ -100,6 +100,7 @@ func AudioHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[audioRequest.Model] != "" {
+			audioRequest.SourceModel = audioRequest.Model
 			audioRequest.Model = modelMap[audioRequest.Model]
 		}
 	}
@@ -184,7 +185,11 @@ func AudioHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 			if quota != 0 {
 				tokenName := c.GetString("token_name")
 				logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
-				model.RecordConsumeLog(ctx, userId, channelId, promptTokens, 0, audioRequest.Model, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, "")
+				logModel := audioRequest.Model
+				if len(audioRequest.SourceModel) > 0 {
+					logModel += "[" + audioRequest.SourceModel + "]"
+				}
+				model.RecordConsumeLog(ctx, userId, channelId, promptTokens, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, int(useTimeSeconds), false, "")
 				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
 				channelId := c.GetInt("channel_id")
 				model.UpdateChannelUsedQuota(channelId, quota)

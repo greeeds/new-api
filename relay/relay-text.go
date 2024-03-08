@@ -85,6 +85,7 @@ func TextHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[textRequest.Model] != "" {
+			textRequest.SourceModel = textRequest.Model
 			textRequest.Model = modelMap[textRequest.Model]
 			isModelMapped = true
 		}
@@ -291,6 +292,9 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 	if strings.HasPrefix(logModel, "gpt-4-gizmo") {
 		logModel = "gpt-4-gizmo-*"
 		logContent += fmt.Sprintf("，模型 %s", textRequest.Model)
+	}
+	if len(textRequest.SourceModel) > 0 {
+		logModel += "[" + textRequest.SourceModel + "]"
 	}
 	var bodyContent string
 	bodyContent = ""

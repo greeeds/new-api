@@ -1,6 +1,7 @@
 package dto
 
 type TextToSpeechRequest struct {
+	SourceModel    string  `json:"source_model,omitempty"`
 	Model          string  `json:"model" binding:"required"`
 	Input          string  `json:"input" binding:"required"`
 	Voice          string  `json:"voice" binding:"required"`
