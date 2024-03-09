@@ -18,7 +18,7 @@ const Detail = (props) => {
         token_name: '',
         model_name: '',
         start_timestamp: localStorage.getItem('data_export_default_time') === 'hour' ? timestamp2string(now.getTime() / 1000 - 86400) : (localStorage.getItem('data_export_default_time') === 'week' ? timestamp2string(now.getTime() / 1000 - 86400 * 30) : timestamp2string(now.getTime() / 1000 - 86400 * 7)),
-        end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
+        end_timestamp: timestamp2string(now.getTime() / 1000 + 86400),
         channel: '',
         data_export_default_time: ''
     });

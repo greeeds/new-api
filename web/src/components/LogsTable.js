@@ -221,7 +221,7 @@ const LogsTable = () => {
             title: '详情',
             dataIndex: 'content',
             render: (text, record, index) => {
-                return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 240 } } } }} style={{ maxWidth: 240}}>
+                return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 240 } } } }}>
                     {text}
                 </Paragraph>
             }
@@ -231,7 +231,7 @@ const LogsTable = () => {
             dataIndex: 'body',
             className: isRoot() ? 'tableShow' : 'tableHiddle',
             render: (text, record, index) => {
-                return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 240 } } } }} style={{ maxWidth: 240}}>
+                return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 120 } } } }} style={{ maxWidth: 120}}>
                     {text}
                 </Paragraph>
             },
@@ -254,8 +254,8 @@ const LogsTable = () => {
         username: '',
         token_name: '',
         model_name: '',
-        start_timestamp: timestamp2string(now.getTime() / 1000 - 86400),
-        end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
+        start_timestamp: timestamp2string(now.getTime() / 1000 - 86400*7),
+        end_timestamp: timestamp2string(now.getTime() / 1000 + 86400),
         channel: ''
     });
     const {username, token_name, model_name, start_timestamp, end_timestamp, channel} = inputs;

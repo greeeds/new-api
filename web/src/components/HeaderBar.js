@@ -115,7 +115,7 @@ const HeaderBar = () => {
                         }}
                         footer={
                             <>
-                                {isNewYear &&
+                                 {isNewYear &&
                                     // happy new year
                                     <Dropdown
                                         position="bottomRight"

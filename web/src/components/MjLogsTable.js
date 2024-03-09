@@ -286,7 +286,7 @@ const LogsTable = () => {
         channel_id: '',
         mj_id: '',
         start_timestamp: timestamp2string(now.getTime() / 1000 - 2592000),
-        end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
+        end_timestamp: timestamp2string(now.getTime() / 1000 + 86400),
     });
     const {channel_id, mj_id, start_timestamp, end_timestamp} = inputs;
 
