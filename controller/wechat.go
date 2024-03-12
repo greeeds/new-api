@@ -92,6 +92,7 @@ func WeChatAuth(c *gin.Context) {
 				})
 				return
 			}
+			common.SendRegisterEmail(user.Username)
 		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,

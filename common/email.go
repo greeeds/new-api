@@ -36,6 +36,14 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
+func SendRegisterEmail(username string) {
+	subject := fmt.Sprintf("%s注册成功通知邮件", SystemName)
+	content := fmt.Sprintf("<p>用户%s注册成功。</p>", username)
+	if err := SendEmail(subject, SMTPAccount, content); err != nil {
+		SysError(fmt.Sprintf("用户%s注册成功发送通知邮件失败", username))
+	}
+}
+
 func SendEmail(subject string, receiver string, content string) error {
 	if SMTPFrom == "" { // for compatibility
 		SMTPFrom = SMTPAccount

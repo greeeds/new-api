@@ -185,6 +185,7 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
+	common.SendRegisterEmail(cleanUser.Username)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
