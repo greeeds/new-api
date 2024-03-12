@@ -37,13 +37,18 @@
 9. 支持渠道**加权随机**
 10. 数据看板
 11. 可设置令牌能调用的模型
-12. 支持Telegram授权登录
+12. 支持Telegram授权登录。
+    1. 系统设置-配置登录注册-允许通过Telegram登录
+    2. 对[@Botfather](https://t.me/botfather)输入指令/setdomain
+    3. 选择你的bot，然后输入http(s)://你的网站地址/login
+    4. Telegram Bot 名称是bot username 去掉@后的字符串
 
 ## 模型支持
 此版本额外支持以下模型：
 1. 第三方模型 **gps** （gpt-4-gizmo-*）
 2. 智谱glm-4v，glm-4v识图
 3. Anthropic Claude 3 (claude-3-opus-20240229, claude-3-sonnet-20240229)
+4. [Ollama](https://github.com/ollama/ollama?tab=readme-ov-file)，添加渠道时，密钥可以随便填写，默认的请求地址是[http://localhost:11434](http://localhost:11434)，如果需要修改请在渠道中修改
 
 您可以在渠道中添加自定义模型gpt-4-gizmo-*，此模型并非OpenAI官方模型，而是第三方模型，使用官方key无法调用。
 
