@@ -13,7 +13,7 @@ import (
 // TODO: when a new api is enabled, check the pricing here
 // 1 === $0.002 / 1K tokens
 // 1 === ￥0.014 / 1k tokens
-var ModelRatio = map[string]float64{
+var DefaultModelRatio = map[string]float64{
 	//"midjourney":                50,
 	"gpt-4-gizmo-*":             15,
 	"gpt-4":                     15,
@@ -64,6 +64,7 @@ var ModelRatio = map[string]float64{
 	"claude-instant-1":          0.4,    // $0.8 / 1M tokens
 	"claude-2.0":                4,      // $8 / 1M tokens
 	"claude-2.1":                4,      // $8 / 1M tokens
+	"claude-3-haiku-20240307":   0.125,  // $0.25 / 1M tokens
 	"claude-3-sonnet-20240229":  1.5,    // $3 / 1M tokens
 	"claude-3-opus-20240229":    7.5,    // $15 / 1M tokens
 	"ERNIE-Bot":                 0.8572, // ￥0.012 / 1k tokens
@@ -94,17 +95,32 @@ var ModelRatio = map[string]float64{
 	"hunyuan":                   7.143,  // ¥0.1 / 1k tokens  // https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
 }
 
-var ModelPrice = map[string]float64{
-	"gpt-4-gizmo-*": 0.1,
-	"mj_imagine":    0.1,
-	"mj_variation":  0.1,
-	"mj_reroll":     0.1,
-	"mj_blend":      0.1,
-	"mj_describe":   0.05,
-	"mj_upscale":    0.05,
+var DefaultModelPrice = map[string]float64{
+	"gpt-4-gizmo-*":     0.1,
+	"mj_imagine":        0.1,
+	"mj_variation":      0.1,
+	"mj_reroll":         0.1,
+	"mj_blend":          0.1,
+	"mj_modal":          0.1,
+	"mj_zoom":           0.1,
+	"mj_shorten":        0.1,
+	"mj_high_variation": 0.1,
+	"mj_low_variation":  0.1,
+	"mj_pan":            0.1,
+	"mj_inpaint":        0,
+	"mj_custom_zoom":    0,
+	"mj_describe":       0.05,
+	"mj_upscale":        0.05,
+	"swap_face":         0.05,
 }
 
+var ModelPrice = map[string]float64{}
+var ModelRatio = map[string]float64{}
+
 func ModelPrice2JSONString() string {
+	if len(ModelPrice) == 0 {
+		ModelPrice = DefaultModelPrice
+	}
 	jsonBytes, err := json.Marshal(ModelPrice)
 	if err != nil {
 		SysError("error marshalling model price: " + err.Error())
@@ -118,6 +134,9 @@ func UpdateModelPriceByJSONString(jsonStr string) error {
 }
 
 func GetModelPrice(name string, printErr bool) float64 {
+	if len(ModelPrice) == 0 {
+		ModelPrice = DefaultModelPrice
+	}
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
@@ -132,6 +151,9 @@ func GetModelPrice(name string, printErr bool) float64 {
 }
 
 func ModelRatio2JSONString() string {
+	if len(ModelRatio) == 0 {
+		ModelRatio = DefaultModelRatio
+	}
 	jsonBytes, err := json.Marshal(ModelRatio)
 	if err != nil {
 		SysError("error marshalling model ratio: " + err.Error())
@@ -145,6 +167,9 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 }
 
 func GetModelRatio(name string) float64 {
+	if len(ModelRatio) == 0 {
+		ModelRatio = DefaultModelRatio
+	}
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
