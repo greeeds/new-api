@@ -3,10 +3,9 @@ package common
 import (
 	"encoding/json"
 	"strings"
-	"time"
 )
 
-// ModelRatio
+// modelRatio
 // https://platform.openai.com/docs/models/model-endpoint-compatibility
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9dlf
 // https://openai.com/pricing
@@ -27,7 +26,7 @@ var DefaultModelRatio = map[string]float64{
 	"gpt-4-turbo-preview":       5,    // $0.01 / 1K tokens
 	"gpt-4-vision-preview":      5,    // $0.01 / 1K tokens
 	"gpt-4-1106-vision-preview": 5,    // $0.01 / 1K tokens
-	"gpt-3.5-turbo":             0.75, // $0.0015 / 1K tokens
+	"gpt-3.5-turbo":             0.25, // $0.0015 / 1K tokens
 	"gpt-3.5-turbo-0301":        0.75,
 	"gpt-3.5-turbo-0613":        0.75,
 	"gpt-3.5-turbo-16k":         1.5, // $0.003 / 1K tokens
@@ -72,8 +71,11 @@ var DefaultModelRatio = map[string]float64{
 	"ERNIE-Bot-4":               8.572,  // ￥0.12 / 1k tokens
 	"Embedding-V1":              0.1429, // ￥0.002 / 1k tokens
 	"PaLM-2":                    1,
-	"gemini-pro":                1,      // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-pro-vision":         1,      // $0.00025 / 1k characters -> $0.001 / 1k tokens
+	"gemini-pro":                1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
+	"gemini-pro-vision":         1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
+	"gemini-1.0-pro-vision-001": 1,
+	"gemini-1.0-pro-001":        1,
+	"gemini-1.5-pro":            1,
 	"chatglm_turbo":             0.3572, // ￥0.005 / 1k tokens
 	"chatglm_pro":               0.7143, // ￥0.01 / 1k tokens
 	"chatglm_std":               0.3572, // ￥0.005 / 1k tokens
@@ -93,6 +95,11 @@ var DefaultModelRatio = map[string]float64{
 	"embedding_s1_v1":           0.0715, // ¥0.001 / 1k tokens
 	"semantic_similarity_s1_v1": 0.0715, // ¥0.001 / 1k tokens
 	"hunyuan":                   7.143,  // ¥0.1 / 1k tokens  // https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
+	// https://platform.lingyiwanwu.com/docs#-计费单元
+	// 已经按照 7.2 来换算美元价格
+	"yi-34b-chat-0205": 0.018,
+	"yi-34b-chat-200k": 0.0864,
+	"yi-vl-plus":       0.0432,
 }
 
 var DefaultModelPrice = map[string]float64{
@@ -114,14 +121,14 @@ var DefaultModelPrice = map[string]float64{
 	"swap_face":         0.05,
 }
 
-var ModelPrice = map[string]float64{}
-var ModelRatio = map[string]float64{}
+var modelPrice map[string]float64 = nil
+var modelRatio map[string]float64 = nil
 
 func ModelPrice2JSONString() string {
-	if len(ModelPrice) == 0 {
-		ModelPrice = DefaultModelPrice
+	if modelPrice == nil {
+		modelPrice = DefaultModelPrice
 	}
-	jsonBytes, err := json.Marshal(ModelPrice)
+	jsonBytes, err := json.Marshal(modelPrice)
 	if err != nil {
 		SysError("error marshalling model price: " + err.Error())
 	}
@@ -129,18 +136,18 @@ func ModelPrice2JSONString() string {
 }
 
 func UpdateModelPriceByJSONString(jsonStr string) error {
-	ModelPrice = make(map[string]float64)
-	return json.Unmarshal([]byte(jsonStr), &ModelPrice)
+	modelPrice = make(map[string]float64)
+	return json.Unmarshal([]byte(jsonStr), &modelPrice)
 }
 
 func GetModelPrice(name string, printErr bool) float64 {
-	if len(ModelPrice) == 0 {
-		ModelPrice = DefaultModelPrice
+	if modelPrice == nil {
+		modelPrice = DefaultModelPrice
 	}
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
-	price, ok := ModelPrice[name]
+	price, ok := modelPrice[name]
 	if !ok {
 		if printErr {
 			SysError("model price not found: " + name)
@@ -151,10 +158,10 @@ func GetModelPrice(name string, printErr bool) float64 {
 }
 
 func ModelRatio2JSONString() string {
-	if len(ModelRatio) == 0 {
-		ModelRatio = DefaultModelRatio
+	if modelRatio == nil {
+		modelRatio = DefaultModelRatio
 	}
-	jsonBytes, err := json.Marshal(ModelRatio)
+	jsonBytes, err := json.Marshal(modelRatio)
 	if err != nil {
 		SysError("error marshalling model ratio: " + err.Error())
 	}
@@ -162,18 +169,18 @@ func ModelRatio2JSONString() string {
 }
 
 func UpdateModelRatioByJSONString(jsonStr string) error {
-	ModelRatio = make(map[string]float64)
-	return json.Unmarshal([]byte(jsonStr), &ModelRatio)
+	modelRatio = make(map[string]float64)
+	return json.Unmarshal([]byte(jsonStr), &modelRatio)
 }
 
 func GetModelRatio(name string) float64 {
-	if len(ModelRatio) == 0 {
-		ModelRatio = DefaultModelRatio
+	if modelRatio == nil {
+		modelRatio = DefaultModelRatio
 	}
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
-	ratio, ok := ModelRatio[name]
+	ratio, ok := modelRatio[name]
 	if !ok {
 		SysError("model ratio not found: " + name)
 		return 30
@@ -183,22 +190,15 @@ func GetModelRatio(name string) float64 {
 
 func GetCompletionRatio(name string) float64 {
 	if strings.HasPrefix(name, "gpt-3.5") {
-		if strings.HasSuffix(name, "0125") {
+		if name == "gpt-3.5-turbo" || strings.HasSuffix(name, "0125") {
+			// https://openai.com/blog/new-embedding-models-and-api-updates
+			// Updated GPT-3.5 Turbo model and lower pricing
 			return 3
 		}
 		if strings.HasSuffix(name, "1106") {
 			return 2
 		}
-		if name == "gpt-3.5-turbo" || name == "gpt-3.5-turbo-16k" {
-			// TODO: clear this after 2023-12-11
-			now := time.Now()
-			// https://platform.openai.com/docs/models/continuous-model-upgrades
-			// if after 2023-12-11, use 2
-			if now.After(time.Date(2023, 12, 11, 0, 0, 0, 0, time.UTC)) {
-				return 2
-			}
-		}
-		return 1.333333
+		return 4.0 / 3.0
 	}
 	if strings.HasPrefix(name, "gpt-4") {
 		if strings.HasSuffix(name, "preview") {
@@ -212,6 +212,16 @@ func GetCompletionRatio(name string) float64 {
 		return 3
 	} else if strings.HasPrefix(name, "claude-3") {
 		return 5
+	}
+	if strings.HasPrefix(name, "mistral-") {
+		return 3
+	}
+	if strings.HasPrefix(name, "gemini-") {
+		return 3
+	}
+	switch name {
+	case "llama2-70b-4096":
+		return 0.8 / 0.7
 	}
 	return 1
 }

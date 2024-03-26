@@ -10,6 +10,7 @@ import (
 	"one-api/dto"
 	"one-api/relay/channel"
 	"one-api/relay/channel/ai360"
+	"one-api/relay/channel/lingyiwanwu"
 	"one-api/relay/channel/moonshot"
 	relaycommon "one-api/relay/common"
 	"one-api/service"
@@ -33,9 +34,6 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		model_ := info.UpstreamModelName
 		model_ = strings.Replace(model_, ".", "", -1)
 		// https://github.com/songquanpeng/one-api/issues/67
-		model_ = strings.TrimSuffix(model_, "-0301")
-		model_ = strings.TrimSuffix(model_, "-0314")
-		model_ = strings.TrimSuffix(model_, "-0613")
 
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
 		return relaycommon.GetFullRequestURL(info.BaseUrl, requestURL, info.ChannelType), nil
@@ -48,6 +46,9 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, info *re
 	if info.ChannelType == common.ChannelTypeAzure {
 		req.Header.Set("api-key", info.ApiKey)
 		return nil
+	}
+	if info.ChannelType == common.ChannelTypeOpenAI && "" != info.Organization {
+		req.Header.Set("OpenAI-Organization", info.Organization)
 	}
 	req.Header.Set("Authorization", "Bearer "+info.ApiKey)
 	//if info.ChannelType == common.ChannelTypeOpenRouter {
@@ -68,13 +69,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage *dto.Usage, err *dto.OpenAIErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage *dto.Usage, err *dto.OpenAIErrorWithStatusCode, sensitiveResp *dto.SensitiveResponse) {
 	if info.IsStream {
 		var responseText string
 		err, responseText = OpenaiStreamHandler(c, resp, info.RelayMode)
-		usage = service.ResponseText2Usage(responseText, info.UpstreamModelName, info.PromptTokens)
+		usage, _ = service.ResponseText2Usage(responseText, info.UpstreamModelName, info.PromptTokens)
 	} else {
-		err, usage = OpenaiHandler(c, resp, info.PromptTokens, info.UpstreamModelName)
+		err, usage, sensitiveResp = OpenaiHandler(c, resp, info.PromptTokens, info.UpstreamModelName, info.RelayMode)
 	}
 	return
 }
@@ -85,6 +86,8 @@ func (a *Adaptor) GetModelList() []string {
 		return ai360.ModelList
 	case common.ChannelTypeMoonshot:
 		return moonshot.ModelList
+	case common.ChannelTypeLingYiWanWu:
+		return lingyiwanwu.ModelList
 	default:
 		return ModelList
 	}
