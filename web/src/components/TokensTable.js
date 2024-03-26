@@ -78,10 +78,10 @@ function renderStatus(status, model_limits_enabled = false) {
       );
     default:
       return (
-        <Tag color='black' size='large'>
-          {' '}
-          未知状态{' '}
-        </Tag>
+          <Tag color='black' size='large'>
+              {' '}
+              未知状态{' '}
+          </Tag>
       );
   }
 }
