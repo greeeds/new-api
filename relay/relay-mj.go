@@ -200,7 +200,7 @@ func RelaySwapFace(c *gin.Context) *dto.MidjourneyResponse {
 			if quota != 0 {
 				tokenName := c.GetString("token_name")
 				logContent := fmt.Sprintf("模型固定价格 %.2f，分组倍率 %.2f，操作 %s", modelPrice, groupRatio, constant.MjActionSwapFace)
-				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, modelName, tokenName, quota, logContent, tokenId, userQuota, 0, false)
+				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, modelName, tokenName, quota, logContent, tokenId, userQuota, 0, false, "")
 				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
 				channelId := c.GetInt("channel_id")
 				model.UpdateChannelUsedQuota(channelId, quota)
@@ -507,7 +507,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 				if imageModel != logModel {
 					logModel = imageModel + "[" + logModel + "]"
 				}
-				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, 0, false, bodyContent)model.RecordConsumeLog(ctx, userId, channelId, 0, 0, modelName, tokenName, quota, logContent, tokenId, userQuota, 0, false)
+				model.RecordConsumeLog(ctx, userId, channelId, 0, 0, logModel, tokenName, quota, logContent, tokenId, userQuota, 0, false, bodyContent)
 				model.UpdateUserUsedQuotaAndRequestCount(userId, quota)
 				channelId := c.GetInt("channel_id")
 				model.UpdateChannelUsedQuota(channelId, quota)

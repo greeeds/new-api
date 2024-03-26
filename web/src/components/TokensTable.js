@@ -50,17 +50,11 @@ const TokensTable = () => {
 
   const link_menu = [
     {
-      node: 'item', key: 'next', name: 'ChatGPT Next Web', onClick: () => {
-        onOpenLink('next');
+      node: 'item', key: 'lobe', name: 'Lobe Chat', onClick: () => {
+        onOpenLink('lobe');
       }
     },
-    { node: 'item', key: 'ama', name: 'AMA 问天', value: 'ama' },
-    {
-      node: 'item', key: 'next-mj', name: 'ChatGPT Web & Midjourney', value: 'next-mj', onClick: () => {
-        onOpenLink('next-mj');
-      }
-    },
-    { node: 'item', key: 'opencat', name: 'OpenCat', value: 'opencat' }
+    { node: 'item', key: 'chat-next-web', name: 'ChatGPT Next Web', value: 'chat-next-web' }
   ];
 
   const columns = [

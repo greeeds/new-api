@@ -133,6 +133,15 @@ const LogsTable = () => {
         {text}
       </Paragraph>;
     }
+  }, {
+    title: '参数',
+    dataIndex: 'body',
+    className: isRoot() ? 'tableShow' : 'tableHiddle',
+    render: (text, record, index) => {
+      return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 120 } } } }} style={{ maxWidth: 120}}>
+        {text}
+      </Paragraph>;
+    }
   }];
 
   const [logs, setLogs] = useState([]);
@@ -152,8 +161,8 @@ const LogsTable = () => {
     username: '',
     token_name: '',
     model_name: '',
-    start_timestamp: timestamp2string(now.getTime() / 1000 - 86400),
-    end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
+    start_timestamp: timestamp2string(now.getTime() / 1000 - 86400 * 7),
+    end_timestamp: timestamp2string(now.getTime() / 1000 + 86400),
     channel: ''
   });
   const { username, token_name, model_name, start_timestamp, end_timestamp, channel } = inputs;
