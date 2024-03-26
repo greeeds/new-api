@@ -207,38 +207,22 @@ const TokensTable = () => {
               menu={[
                 {
                   node: 'item',
-                  key: 'next',
+                  key: 'lobe',
                   disabled: !localStorage.getItem('chat_link'),
+                  name: 'Lobe Chat',
+                  onClick: () => {
+                    onOpenLink('lobe', record.key);
+                  },
+                },
+                {
+                  node: 'item',
+                  key: 'chat-next-web',
+                  disabled: !localStorage.getItem('chat_link2'),
                   name: 'ChatGPT Next Web',
                   onClick: () => {
-                    onOpenLink('next', record.key);
+                    onOpenLink('chat-next-web', record.key);
                   },
-                },
-                {
-                  node: 'item',
-                  key: 'next-mj',
-                  disabled: !localStorage.getItem('chat_link2'),
-                  name: 'ChatGPT Web & Midjourney',
-                  onClick: () => {
-                    onOpenLink('next-mj', record.key);
-                  },
-                },
-                {
-                  node: 'item',
-                  key: 'ama',
-                  name: 'AMA 问天（BotGem）',
-                  onClick: () => {
-                    onOpenLink('ama', record.key);
-                  },
-                },
-                {
-                  node: 'item',
-                  key: 'opencat',
-                  name: 'OpenCat',
-                  onClick: () => {
-                    onOpenLink('opencat', record.key);
-                  },
-                },
+                }
               ]}
             >
               <Button
