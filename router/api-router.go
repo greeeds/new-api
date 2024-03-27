@@ -17,12 +17,13 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/status/test", middleware.AdminAuth(), controller.TestStatus)
 		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/about", controller.GetAbout)
-		//apiRouter.GET("/midjourney", controller.GetMidjourney)
+		apiRouter.GET("/midjourney", controller.GetMidjourney)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)
 		apiRouter.GET("/oauth/github", middleware.CriticalRateLimit(), controller.GitHubOAuth)
+		apiRouter.GET("/oauth/linuxdo", middleware.CriticalRateLimit(), controller.LinuxDoOAuth)
 		apiRouter.GET("/oauth/state", middleware.CriticalRateLimit(), controller.GenerateOAuthCode)
 		apiRouter.GET("/oauth/wechat", middleware.CriticalRateLimit(), controller.WeChatAuth)
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.WeChatBind)
@@ -30,13 +31,14 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/telegram/login", middleware.CriticalRateLimit(), controller.TelegramLogin)
 		apiRouter.GET("/oauth/telegram/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.TelegramBind)
 
+		apiRouter.POST("/stripe/webhook", controller.StripeWebhook)
+
 		userRoute := apiRouter.Group("/user")
 		{
 			userRoute.POST("/register", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.Register)
 			userRoute.POST("/login", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.Login)
 			//userRoute.POST("/tokenlog", middleware.CriticalRateLimit(), controller.TokenLog)
 			userRoute.GET("/logout", controller.Logout)
-			userRoute.GET("/epay/notify", controller.EpayNotify)
 
 			selfRoute := userRoute.Group("/")
 			selfRoute.Use(middleware.UserAuth())
@@ -47,8 +49,8 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.DELETE("/self", controller.DeleteSelf)
 				selfRoute.GET("/token", controller.GenerateAccessToken)
 				selfRoute.GET("/aff", controller.GetAffCode)
-				selfRoute.POST("/topup", controller.TopUp)
-				selfRoute.POST("/pay", controller.RequestEpay)
+				selfRoute.POST("/topup", middleware.CriticalRateLimit(), controller.TopUp)
+				selfRoute.POST("/pay", middleware.CriticalRateLimit(), controller.RequestPayLink)
 				selfRoute.POST("/amount", controller.RequestAmount)
 				selfRoute.POST("/aff_transfer", controller.TransferAffQuota)
 			}
@@ -62,7 +64,7 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.POST("/", controller.CreateUser)
 				adminRoute.POST("/manage", controller.ManageUser)
 				adminRoute.PUT("/", controller.UpdateUser)
-				adminRoute.DELETE("/:id", controller.DeleteUser)
+				adminRoute.DELETE("/:id", controller.HardDeleteUser)
 			}
 		}
 		optionRoute := apiRouter.Group("/option")

@@ -79,6 +79,7 @@ export function showError(error) {
       switch (error.response.status) {
         case 401:
           // toast.error('错误：未登录或登录已过期，请重新登录！', showErrorOptions);
+          localStorage.removeItem('user');
           window.location.href = '/login?expired=true';
           break;
         case 429:
@@ -126,6 +127,10 @@ export function openPage(url) {
 }
 
 export function removeTrailingSlash(url) {
+  if (!url) {
+    return '';
+  }
+
   if (url.endsWith('/')) {
     return url.slice(0, -1);
   } else {

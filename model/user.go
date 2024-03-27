@@ -21,6 +21,8 @@ type User struct {
 	Status           int            `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email            string         `json:"email" gorm:"index" validate:"max=50"`
 	GitHubId         string         `json:"github_id" gorm:"column:github_id;index"`
+	LinuxDoId        string         `json:"linuxdo_id" gorm:"column:linuxdo_id;index"`
+	LinuxDoLevel     int            `json:"linuxdo_level" gorm:"column:linuxdo_level;type:int;default:0"`
 	WeChatId         string         `json:"wechat_id" gorm:"column:wechat_id;index"`
 	TelegramId       string         `json:"telegram_id" gorm:"column:telegram_id;index"`
 	VerificationCode string         `json:"verification_code" gorm:"-:all"`                                    // this field is only for Email verification, don't save it to database!
@@ -34,6 +36,7 @@ type User struct {
 	AffQuota         int            `json:"aff_quota" gorm:"type:int;default:0;column:aff_quota"`           // 邀请剩余额度
 	AffHistoryQuota  int            `json:"aff_history_quota" gorm:"type:int;default:0;column:aff_history"` // 邀请历史额度
 	InviterId        int            `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
+	StripeCustomer   string         `json:"stripe_customer" gorm:"column:stripe_customer;index"`
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 }
 
@@ -63,7 +66,7 @@ func CheckUserExistOrDeleted(username string, email string) (bool, error) {
 
 func GetMaxUserId() int {
 	var user User
-	DB.Last(&user)
+	DB.Unscoped().Last(&user)
 	return user.Id
 }
 
@@ -87,6 +90,20 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 		err = DB.First(&user, "id = ?", id).Error
 	} else {
 		err = DB.Omit("password").First(&user, "id = ?", id).Error
+	}
+	return &user, err
+}
+
+func GetUserByIdUnscoped(id int, selectAll bool) (*User, error) {
+	if id == 0 {
+		return nil, errors.New("id 为空！")
+	}
+	user := User{Id: id}
+	var err error = nil
+	if selectAll {
+		err = DB.Unscoped().First(&user, "id = ?", id).Error
+	} else {
+		err = DB.Unscoped().Omit("password").First(&user, "id = ?", id).Error
 	}
 	return &user, err
 }
@@ -272,6 +289,14 @@ func (user *User) FillUserByGitHubId() error {
 	return nil
 }
 
+func (user *User) FillUserByLinuxDoId() error {
+	if user.LinuxDoId == "" {
+		return errors.New("LINUX DO id 为空！")
+	}
+	DB.Where(User{LinuxDoId: user.LinuxDoId}).First(user)
+	return nil
+}
+
 func (user *User) FillUserByWeChatId() error {
 	if user.WeChatId == "" {
 		return errors.New("WeChat id 为空！")
@@ -309,6 +334,10 @@ func IsWeChatIdAlreadyTaken(wechatId string) bool {
 
 func IsGitHubIdAlreadyTaken(githubId string) bool {
 	return DB.Where("github_id = ?", githubId).Find(&User{}).RowsAffected == 1
+}
+
+func IsLinuxDoIdAlreadyTaken(linuxdoId string) bool {
+	return DB.Where("linuxdo_id = ?", linuxdoId).Find(&User{}).RowsAffected == 1
 }
 
 func IsUsernameAlreadyTaken(username string) bool {
@@ -367,6 +396,18 @@ func IsUserEnabled(userId int) (bool, error) {
 		return false, err
 	}
 	return user.Status == common.UserStatusEnabled, nil
+}
+
+func IsLinuxDoEnabled(userId int) (bool, error) {
+	if userId == 0 {
+		return false, errors.New("user id is empty")
+	}
+	var user User
+	err := DB.Where("id = ?", userId).Select("linuxdo_id, linuxdo_level").Find(&user).Error
+	if err != nil {
+		return false, err
+	}
+	return user.LinuxDoId == "" || user.LinuxDoLevel >= common.LinuxDoMinLevel, nil
 }
 
 func ValidateAccessToken(token string) (user *User) {

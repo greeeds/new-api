@@ -77,6 +77,8 @@ const RegisterForm = () => {
       );
       const { success, message } = res.data;
       if (success) {
+        localStorage.removeItem('aff');
+
         navigate('/login');
         showSuccess('注册成功！');
       } else {
