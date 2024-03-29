@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+const DEFAULT_WORD = "**###**"
+const SPLIT_KEY = "$$"
+
 // SensitiveWordContains 是否包含敏感词，返回是否包含敏感词和敏感词列表
 func SensitiveWordContains(text string) (bool, []string) {
 	if len(constant.SensitiveWords) == 0 {
@@ -33,6 +36,7 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 		return false, nil, text
 	}
 	checkText := strings.ToLower(text)
+	replaceWordMap := replaceMap()
 	m := initAc()
 	hits := m.MultiPatternSearch([]rune(checkText), returnImmediately)
 	if len(hits) > 0 {
@@ -40,7 +44,8 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 		for _, hit := range hits {
 			pos := hit.Pos
 			word := string(hit.Word)
-			text = text[:pos] + "**###**" + text[pos+len(word):]
+			replaceWord := replaceWordMap[word]
+			text = text[:pos] + replaceWord + text[pos+len(word):]
 			words = append(words, word)
 		}
 		return true, words, text
@@ -62,10 +67,27 @@ func readRunes() [][]rune {
 	var dict [][]rune
 
 	for _, word := range constant.SensitiveWords {
-		word = strings.ToLower(word)
+		word = strings.ToLower(strings.Split(word, SPLIT_KEY)[0])
 		l := bytes.TrimSpace([]byte(word))
 		dict = append(dict, bytes.Runes(l))
 	}
 
 	return dict
+}
+
+func replaceMap() map[string]string {
+	result := make(map[string]string)
+	for _, word := range constant.SensitiveWords {
+		if strings.Contains(word, SPLIT_KEY) {
+			parts := strings.Split(word, SPLIT_KEY)
+			if len(parts) == 2 {
+				result[strings.ToLower(parts[0])] = parts[1]
+			} else {
+				result[strings.ToLower(parts[0])] = ""
+			}
+		} else {
+			result[strings.ToLower(word)] = DEFAULT_WORD
+		}
+	}
+	return result
 }
