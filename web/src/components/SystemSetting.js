@@ -138,7 +138,7 @@ const SystemSetting = () => {
     }
     if (
       name === 'Notice' ||
-      (name.startsWith('SMTP') && !name.endsWith('Enabled') && name !== 'SMTPSSLEnabled' ||
+      (name.startsWith('SMTP') && !name.endsWith('Enabled') && name !== 'SMTPSSLEnabled') ||
       name === 'ServerAddress' ||
       name === 'EpayId' ||
       name === 'EpayKey' ||
