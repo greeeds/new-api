@@ -50,6 +50,7 @@ func InitOptionMap() {
 	common.OptionMap["SMTPPort"] = strconv.Itoa(common.SMTPPort)
 	common.OptionMap["SMTPAccount"] = ""
 	common.OptionMap["SMTPToken"] = ""
+	common.OptionMap["SMTPSSLEnabled"] = strconv.FormatBool(common.SMTPSSLEnabled)
 	common.OptionMap["Notice"] = ""
 	common.OptionMap["About"] = ""
 	common.OptionMap["HomePageContent"] = ""
@@ -200,6 +201,8 @@ func updateOptionMap(key string, value string) (err error) {
 			constant.CheckSensitiveOnCompletionEnabled = boolValue
 		case "StopOnSensitiveEnabled":
 			constant.StopOnSensitiveEnabled = boolValue
+		case "SMTPSSLEnabled":
+			common.SMTPSSLEnabled = boolValue
 		case "SMTPAuthLoginEnabled":
 			common.SMTPAuthLoginEnabled = boolValue
 		}

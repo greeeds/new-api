@@ -43,6 +43,7 @@ const SystemSetting = () => {
     TurnstileSecretKey: '',
     RegisterEnabled: '',
     EmailDomainRestrictionEnabled: '',
+    SMTPSSLEnabled: '',
     EmailDomainWhitelist: [],
     // telegram login
     TelegramOAuthEnabled: '',
@@ -99,6 +100,7 @@ const SystemSetting = () => {
       case 'TelegramOAuthEnabled':
       case 'TurnstileCheckEnabled':
       case 'EmailDomainRestrictionEnabled':
+      case 'SMTPSSLEnabled':
       case 'RegisterEnabled':
       case 'SMTPAuthLoginEnabled':
         value = inputs[key] === 'true' ? 'false' : 'true';
@@ -136,7 +138,7 @@ const SystemSetting = () => {
     }
     if (
       name === 'Notice' ||
-      (name.startsWith('SMTP') && !name.endsWith('Enabled')) ||
+      (name.startsWith('SMTP') && !name.endsWith('Enabled') && name !== 'SMTPSSLEnabled' ||
       name === 'ServerAddress' ||
       name === 'EpayId' ||
       name === 'EpayKey' ||
@@ -571,11 +573,21 @@ const SystemSetting = () => {
               checked={inputs.RegisterEnabled === 'true'}
               placeholder='敏感信息不会发送到前端显示'
             />
+          </Form.Group>
+          <Form.Group widths={3}>
             <Form.Checkbox
-                label='使用 SMTP LOGIN 认证方式'
-                name='SMTPAuthLoginEnabled'
-                onChange={handleInputChange}
-                checked={inputs.SMTPAuthLoginEnabled === 'true'}
+              label='启用SMTP SSL（465端口强制开启）'
+              name='SMTPSSLEnabled'
+              onChange={handleInputChange}
+              checked={inputs.SMTPSSLEnabled === 'true'}
+            />
+          </Form.Group>
+          <Form.Group widths={3}>
+            <Form.Checkbox
+              label='使用 SMTP LOGIN 认证方式'
+              name='SMTPAuthLoginEnabled'
+              onChange={handleInputChange}
+              checked={inputs.SMTPAuthLoginEnabled === 'true'}
             />
           </Form.Group>
           <Form.Button onClick={submitSMTP}>保存 SMTP 设置</Form.Button>
