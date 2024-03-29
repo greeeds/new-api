@@ -40,6 +40,7 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 	checkText := strings.ToLower(text)
 	m := initAc()
 	hits := m.MultiPatternSearch([]rune(checkText), returnImmediately)
+	common.SysLog(fmt.Sprintf("敏感字符检索原文: %s", checkText))
 	jsonData, err := json.Marshal(hits)
 	if err == nil {
 		common.SysLog(fmt.Sprintf("检索敏感字符: %s", string(jsonData)))
