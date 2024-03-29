@@ -36,19 +36,25 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 		return false, nil, text
 	}
 	checkText := strings.ToLower(text)
-	replaceWordMap := replaceMap()
 	m := initAc()
 	hits := m.MultiPatternSearch([]rune(checkText), returnImmediately)
 	if len(hits) > 0 {
-		words := make([]string, 0)
+		textRunes := []rune(text)
+		replaceWordMap := replaceMap()
+		words := make([]string, 0, len(hits))
+		var builder strings.Builder
+		posOffset := 0
 		for _, hit := range hits {
 			pos := hit.Pos
 			word := string(hit.Word)
 			replaceWord := replaceWordMap[word]
-			text = text[:pos] + replaceWord + text[pos+len(word):]
+			builder.WriteString(string(textRunes[posOffset:pos]))
+			builder.WriteString(replaceWord)
+			posOffset = pos + len([]rune(word))
 			words = append(words, word)
 		}
-		return true, words, text
+		builder.WriteString(string(textRunes[posOffset:]))
+		return true, words, builder.String()
 	}
 	return false, nil, text
 }
