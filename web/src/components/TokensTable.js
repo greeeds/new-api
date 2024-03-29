@@ -440,7 +440,7 @@ const TokensTable = () => {
        url = `${lobeLink}?domain=${encodedServerAddress}&key=sk-${key}`;
        break;
      case 'chat-next-web':
-       url = `${nextWebLink}?domain=${encodedServerAddress}&key=sk-${key}`;
+       url = `${nextWebLink}/#/?settings={"key":"sk-${key}","url":"${serverAddress}"}`;
        break;
      default:
        if (!lobeLink) {
