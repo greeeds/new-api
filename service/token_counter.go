@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"one-api/common"
+	"one-api/constant"
 	"one-api/dto"
 	"strings"
 	"unicode/utf8"
@@ -144,7 +145,7 @@ func CountTokenMessages(messages []dto.Message, model string, checkSensitive boo
 				if err := json.Unmarshal(message.Content, &stringContent); err != nil {
 					return 0, err, false
 				} else {
-					if checkSensitive {
+					if checkSensitive && constant.StopOnSensitiveEnabled {
 						contains, words := SensitiveWordContains(stringContent)
 						if contains {
 							err := fmt.Errorf("message contains sensitive words: [%s]", strings.Join(words, ", "))
@@ -227,7 +228,7 @@ func CountAudioToken(text string, model string, check bool) (int, error, bool) {
 func CountTokenText(text string, model string, check bool) (int, error, bool) {
 	var err error
 	var trigger bool
-	if check {
+	if check && constant.StopOnSensitiveEnabled {
 		contains, words := SensitiveWordContains(text)
 		if contains {
 			err = fmt.Errorf("input contains sensitive words: [%s]", strings.Join(words, ","))
