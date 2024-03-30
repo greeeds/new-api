@@ -2,10 +2,8 @@ package service
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/anknown/ahocorasick"
-	"one-api/common"
 	"one-api/constant"
 	"strings"
 )
@@ -40,16 +38,7 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 	checkText := strings.ToLower(text)
 	m := initAc()
 	hits := m.MultiPatternSearch([]rune(checkText), returnImmediately)
-	common.SysLog(fmt.Sprintf("敏感字符检索原文: %s", checkText))
-	jsonData, err := json.Marshal(hits)
-	if err == nil {
-		common.SysLog(fmt.Sprintf("检索敏感字符: %s", string(jsonData)))
-	}
 	replaceWordMap := replaceMap()
-	jsonData, err = json.Marshal(replaceWordMap)
-	if err == nil {
-		common.SysLog(fmt.Sprintf("敏感字符map: %s", string(jsonData)))
-	}
 	if len(hits) > 0 {
 		textRunes := []rune(text)
 		words := make([]string, 0, len(hits))
@@ -59,7 +48,6 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 			pos := hit.Pos
 			word := string(hit.Word)
 			replaceWord := replaceWordMap[word]
-			common.SysLog(fmt.Sprintf("替换敏感字符: [%s] 为[%s]", word, replaceWord))
 			builder.WriteString(string(textRunes[posOffset:pos]))
 			builder.WriteString(replaceWord)
 			posOffset = pos + len([]rune(word))
@@ -96,7 +84,6 @@ func readRunes() [][]rune {
 func replaceMap() map[string]string {
 	result := make(map[string]string)
 	for _, word := range constant.SensitiveWords {
-		common.SysLog(fmt.Sprintf("加载敏感字符: %s     %s", word, strings.ToLower(strings.Split(word, SPLIT_KEY)[0])))
 		if strings.Contains(word, SPLIT_KEY) {
 			parts := strings.Split(word, SPLIT_KEY)
 			if len(parts) == 2 {
