@@ -46,7 +46,9 @@ const SystemSetting = () => {
     TurnstileSiteKey: '',
     TurnstileSecretKey: '',
     RegisterEnabled: '',
+    UserSelfDeletionEnabled: false,
     EmailDomainRestrictionEnabled: '',
+    SMTPSSLEnabled: '',
     EmailDomainWhitelist: [],
     // telegram login
     TelegramOAuthEnabled: '',
@@ -104,7 +106,9 @@ const SystemSetting = () => {
       case 'TelegramOAuthEnabled':
       case 'TurnstileCheckEnabled':
       case 'EmailDomainRestrictionEnabled':
+      case 'SMTPSSLEnabled':
       case 'RegisterEnabled':
+      case 'UserSelfDeletionEnabled':
       case 'PaymentEnabled':
       case 'SMTPAuthLoginEnabled':
         value = inputs[key] === 'true' ? 'false' : 'true';
@@ -139,7 +143,7 @@ const SystemSetting = () => {
     }
     if (
       name === 'Notice' ||
-      (name.startsWith('SMTP') && !name.endsWith('Enabled')) ||
+      (name.startsWith('SMTP') && !name.endsWith('Enabled') && name !== 'SMTPSSLEnabled') ||
       name === 'ServerAddress' ||
       name === 'StripeApiSecret' ||
       name === 'StripeWebhookSecret' ||
@@ -538,6 +542,12 @@ const SystemSetting = () => {
               name='TurnstileCheckEnabled'
               onChange={handleInputChange}
             />
+            <Form.Checkbox
+              checked={inputs.UserSelfDeletionEnabled === 'true'}
+              label='允许用户自行删除账户'
+              name='UserSelfDeletionEnabled'
+              onChange={handleInputChange}
+            />
           </Form.Group>
           <Divider />
           <Header as='h3'>
@@ -644,6 +654,14 @@ const SystemSetting = () => {
               autoComplete='new-password'
               checked={inputs.RegisterEnabled === 'true'}
               placeholder='敏感信息不会发送到前端显示'
+            />
+          </Form.Group>
+          <Form.Group widths={3}>
+            <Form.Checkbox
+              label='启用SMTP SSL（465端口强制开启）'
+              name='SMTPSSLEnabled'
+              onChange={handleInputChange}
+              checked={inputs.SMTPSSLEnabled === 'true'}
             />
             <Form.Checkbox
                 label='使用 SMTP LOGIN 认证方式'

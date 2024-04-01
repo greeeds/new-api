@@ -55,6 +55,7 @@ var WeChatAuthEnabled = false
 var TelegramOAuthEnabled = false
 var TurnstileCheckEnabled = false
 var RegisterEnabled = true
+var UserSelfDeletionEnabled = false
 
 var EmailDomainRestrictionEnabled = false
 var EmailDomainWhitelist = []string{
@@ -76,6 +77,7 @@ var LogConsumeEnabled = true
 
 var SMTPServer = ""
 var SMTPPort = 587
+var SMTPSSLEnabled = false
 var SMTPAccount = ""
 var SMTPFrom = ""
 var SMTPToken = ""

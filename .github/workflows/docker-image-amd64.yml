@@ -1,10 +1,6 @@
 name: Publish Docker image (amd64)
 
 on:
-  push:
-    tags:
-      - '*'
-      - '!*-alpha*'
   workflow_dispatch:
     inputs:
       name:

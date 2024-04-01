@@ -190,15 +190,17 @@ func GetModelRatio(name string) float64 {
 
 func GetCompletionRatio(name string) float64 {
 	if strings.HasPrefix(name, "gpt-3.5") {
-		if name == "gpt-3.5-turbo" || strings.HasSuffix(name, "0125") {
-			// https://openai.com/blog/new-embedding-models-and-api-updates
-			// Updated GPT-3.5 Turbo model and lower pricing
+		if strings.HasSuffix(name, "0125") {
 			return 3
 		}
 		if strings.HasSuffix(name, "1106") {
 			return 2
 		}
-		return 4.0 / 3.0
+		if name == "gpt-3.5-turbo" {
+			return 3
+		}
+
+		return 1.333333
 	}
 	if strings.HasPrefix(name, "gpt-4") {
 		if strings.HasSuffix(name, "preview") {
