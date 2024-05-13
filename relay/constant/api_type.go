@@ -19,13 +19,24 @@ const (
 	APITypeOllama
 	APITypePerplexity
 	APITypeAws
+	APITypeCohere
 
 	APITypeDummy // this one is only for count, do not add any channel after this
 )
 
 func ChannelType2APIType(channelType int) int {
-	apiType := APITypeOpenAI
+	apiType := -1
 	switch channelType {
+	case common.ChannelTypeOpenAI:
+		apiType = APITypeOpenAI
+	case common.ChannelTypeAzure:
+		apiType = APITypeOpenAI
+	case common.ChannelTypeMoonshot:
+		apiType = APITypeOpenAI
+	case common.ChannelTypeLingYiWanWu:
+		apiType = APITypeOpenAI
+	case common.ChannelType360:
+		apiType = APITypeOpenAI
 	case common.ChannelTypeAnthropic:
 		apiType = APITypeAnthropic
 	case common.ChannelTypeBaidu:
@@ -52,6 +63,8 @@ func ChannelType2APIType(channelType int) int {
 		apiType = APITypePerplexity
 	case common.ChannelTypeAws:
 		apiType = APITypeAws
+	case common.ChannelTypeCohere:
+		apiType = APITypeCohere
 	}
 	return apiType
 }

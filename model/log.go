@@ -24,6 +24,7 @@ type Log struct {
 	IsStream         bool   `json:"is_stream" gorm:"default:false"`
 	ChannelId        int    `json:"channel" gorm:"index"`
 	TokenId          int    `json:"token_id" gorm:"default:0;index"`
+	Other            string `json:"other"`
 	Body             string `json:"body"`
 }
 
@@ -58,12 +59,13 @@ func RecordLog(userId int, logType int, content string) {
 	}
 }
 
-func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptTokens int, completionTokens int, modelName string, tokenName string, quota int, content string, tokenId int, userQuota int, useTimeSeconds int, isStream bool, bodyContent string) {
+func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptTokens int, completionTokens int, modelName string, tokenName string, quota int, content string, tokenId int, userQuota int, useTimeSeconds int, isStream bool, other map[string]interface{}, bodyContent string) {
 	common.LogInfo(ctx, fmt.Sprintf("record consume log: userId=%d, 用户调用前余额=%d, channelId=%d, promptTokens=%d, completionTokens=%d, modelName=%s, tokenName=%s, quota=%d, content=%s, bodyContent=%s", userId, userQuota, channelId, promptTokens, completionTokens, modelName, tokenName, quota, content, bodyContent))
 	if !common.LogConsumeEnabled {
 		return
 	}
 	username, _ := CacheGetUsername(userId)
+	otherStr := common.MapToJsonStr(other)
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -79,6 +81,7 @@ func RecordConsumeLog(ctx context.Context, userId int, channelId int, promptToke
 		TokenId:          tokenId,
 		UseTime:          useTimeSeconds,
 		IsStream:         isStream,
+		Other:            otherStr,
 		Body:             bodyContent,
 	}
 	err := DB.Create(log).Error

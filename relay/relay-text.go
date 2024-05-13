@@ -265,10 +265,10 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 	completionTokens := usage.CompletionTokens
 
 	tokenName := ctx.GetString("token_name")
+	completionRatio := common.GetCompletionRatio(textRequest.Model)
 
 	quota := 0
 	if modelPrice == -1 {
-		completionRatio := common.GetCompletionRatio(textRequest.Model)
 		quota = promptTokens + int(float64(completionTokens)*completionRatio)
 		quota = int(float64(quota) * ratio)
 		if ratio != 0 && quota <= 0 {
@@ -280,7 +280,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 	totalTokens := promptTokens + completionTokens
 	var logContent string
 	if modelPrice == -1 {
-		logContent = fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f", modelRatio, groupRatio)
+		logContent = fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
 	} else {
 		logContent = fmt.Sprintf("模型价格 %.2f，分组倍率 %.2f", modelPrice, groupRatio)
 	}
@@ -316,6 +316,11 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 		logModel = "gpt-4-gizmo-*"
 		logContent += fmt.Sprintf("，模型 %s", textRequest.Model)
 	}
+	other := make(map[string]interface{})
+	other["model_ratio"] = modelRatio
+	other["group_ratio"] = groupRatio
+	other["completion_ratio"] = completionRatio
+	other["model_price"] = modelPrice
 	if len(textRequest.SourceModel) > 0 && textRequest.SourceModel != textRequest.Model {
 		logModel += "[" + textRequest.SourceModel + "]"
 	}
@@ -325,7 +330,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, textRe
 	if err == nil {
 		bodyContent = string(jsonData)
 	}
-	model.RecordConsumeLog(ctx, relayInfo.UserId, relayInfo.ChannelId, promptTokens, completionTokens, logModel, tokenName, quota, logContent, relayInfo.TokenId, userQuota, int(useTimeSeconds), relayInfo.IsStream, bodyContent)
+	model.RecordConsumeLog(ctx, relayInfo.UserId, relayInfo.ChannelId, promptTokens, completionTokens, logModel, tokenName, quota, logContent, relayInfo.TokenId, userQuota, int(useTimeSeconds), relayInfo.IsStream, other, bodyContent)
 
 	//if quota != 0 {
 	//
