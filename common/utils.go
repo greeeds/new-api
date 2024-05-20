@@ -250,3 +250,20 @@ func MapToJsonStr(m map[string]interface{}) string {
 	}
 	return string(bytes)
 }
+
+func MapToJsonStrFloat(m map[string]float64) string {
+	bytes, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(bytes)
+}
+
+func StrToMap(str string) map[string]interface{} {
+	m := make(map[string]interface{})
+	err := json.Unmarshal([]byte(str), &m)
+	if err != nil {
+		return nil
+	}
+	return m
+}

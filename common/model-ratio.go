@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+//from songquanpeng/one-api
+const (
+	USD2RMB = 7.3 // 暂定 1 USD = 7.3 RMB
+	USD     = 500 // $0.002 = 1 -> $1 = 500
+	RMB     = USD / USD2RMB
+)
+
 // modelRatio
 // https://platform.openai.com/docs/models/model-endpoint-compatibility
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Blfmc9dlf
@@ -27,6 +34,8 @@ var DefaultModelRatio = map[string]float64{
 	"gpt-4-turbo-preview":       5,    // $0.01 / 1K tokens
 	"gpt-4-vision-preview":      5,    // $0.01 / 1K tokens
 	"gpt-4-1106-vision-preview": 5,    // $0.01 / 1K tokens
+	"gpt-4o":                    2.5,  // $0.01 / 1K tokens
+	"gpt-4o-2024-05-13":         2.5,  // $0.01 / 1K tokens
 	"gpt-4-turbo":               5,    // $0.01 / 1K tokens
 	"gpt-4-turbo-2024-04-09":    5,    // $0.01 / 1K tokens
 	"gpt-3.5-turbo":             0.25, // $0.0015 / 1K tokens
@@ -61,17 +70,23 @@ var DefaultModelRatio = map[string]float64{
 	"text-search-ada-doc-001":      10,
 	"text-moderation-stable":       0.1,
 	"text-moderation-latest":       0.1,
-	"dall-e-2":                     8,
-	"dall-e-3":                     16,
 	"claude-instant-1":             0.4,    // $0.8 / 1M tokens
 	"claude-2.0":                   4,      // $8 / 1M tokens
 	"claude-2.1":                   4,      // $8 / 1M tokens
 	"claude-3-haiku-20240307":      0.125,  // $0.25 / 1M tokens
 	"claude-3-sonnet-20240229":     1.5,    // $3 / 1M tokens
 	"claude-3-opus-20240229":       7.5,    // $15 / 1M tokens
-	"ERNIE-Bot":                    0.8572, // ￥0.012 / 1k tokens
-	"ERNIE-Bot-turbo":              0.5715, // ￥0.008 / 1k tokens
-	"ERNIE-Bot-4":                  8.572,  // ￥0.12 / 1k tokens
+	"ERNIE-Bot":                    0.8572, // ￥0.012 / 1k tokens //renamed to ERNIE-3.5-8K
+	"ERNIE-Bot-turbo":              0.5715, // ￥0.008 / 1k tokens //renamed to ERNIE-Lite-8K
+	"ERNIE-Bot-4":                  8.572,  // ￥0.12 / 1k tokens //renamed to ERNIE-4.0-8K
+	"ERNIE-4.0-8K":                 8.572,  // ￥0.12 / 1k tokens
+	"ERNIE-3.5-8K":                 0.8572, // ￥0.012 / 1k tokens
+	"ERNIE-Speed-8K":               0.2858, // ￥0.004 / 1k tokens
+	"ERNIE-Speed-128K":             0.2858, // ￥0.004 / 1k tokens
+	"ERNIE-Lite-8K":                0.2143, // ￥0.003 / 1k tokens
+	"ERNIE-Tiny-8K":                0.0715, // ￥0.001 / 1k tokens
+	"ERNIE-Character-8K":           0.2858, // ￥0.004 / 1k tokens
+	"ERNIE-Functions-8K":           0.2858, // ￥0.004 / 1k tokens
 	"Embedding-V1":                 0.1429, // ￥0.002 / 1k tokens
 	"PaLM-2":                       1,
 	"gemini-pro":                   1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
@@ -79,6 +94,7 @@ var DefaultModelRatio = map[string]float64{
 	"gemini-1.0-pro-vision-001":    1,
 	"gemini-1.0-pro-001":           1,
 	"gemini-1.5-pro-latest":        1,
+	"gemini-1.5-flash-latest":      1,
 	"gemini-1.0-pro-latest":        1,
 	"gemini-1.0-pro-vision-latest": 1,
 	"gemini-ultra":                 1,
@@ -97,15 +113,27 @@ var DefaultModelRatio = map[string]float64{
 	"SparkDesk-v3.1":               1.2858, // ￥0.018 / 1k tokens
 	"SparkDesk-v3.5":               1.2858, // ￥0.018 / 1k tokens
 	"360GPT_S2_V9":                 0.8572, // ¥0.012 / 1k tokens
+	"360gpt-turbo":                 0.0858, // ¥0.0012 / 1k tokens
+	"360gpt-turbo-responsibility-8k": 0.8572, // ¥0.012 / 1k tokens
+	"360gpt-pro":                   0.8572, // ¥0.012 / 1k tokens
 	"embedding-bert-512-v1":        0.0715, // ¥0.001 / 1k tokens
 	"embedding_s1_v1":              0.0715, // ¥0.001 / 1k tokens
 	"semantic_similarity_s1_v1":    0.0715, // ¥0.001 / 1k tokens
 	"hunyuan":                      7.143,  // ¥0.1 / 1k tokens  // https://cloud.tencent.com/document/product/1729/97731#e0e6be58-60c8-469f-bdeb-6c264ce3b4d0
 	// https://platform.lingyiwanwu.com/docs#-计费单元
 	// 已经按照 7.2 来换算美元价格
-	"yi-34b-chat-0205":      0.018,
-	"yi-34b-chat-200k":      0.0864,
-	"yi-vl-plus":            0.0432,
+	"yi-34b-chat-0205":      0.18,
+	"yi-34b-chat-200k":      0.864,
+	"yi-vl-plus":            0.432,
+	"yi-large":              20.0 / 1000 * RMB,
+	"yi-medium":             2.5 / 1000 * RMB,
+	"yi-vision":             6.0 / 1000 * RMB,
+	"yi-medium-200k":        12.0 / 1000 * RMB,
+	"yi-spark":              1.0 / 1000 * RMB,
+	"yi-large-rag":          25.0 / 1000 * RMB,
+	"yi-large-turbo":        12.0 / 1000 * RMB,
+	"yi-large-preview":      20.0 / 1000 * RMB,
+	"yi-large-rag-preview":  25.0 / 1000 * RMB,
 	"command":               0.5,
 	"command-nightly":       0.5,
 	"command-light":         0.5,
@@ -114,9 +142,16 @@ var DefaultModelRatio = map[string]float64{
 	"command-r-plus	":       1.5,
 	"deepseek-chat":         0.07,
 	"deepseek-coder":        0.07,
+	// Perplexity online 模型对搜索额外收费，有需要应自行调整，此处不计入搜索费用
+	"llama-3-sonar-small-32k-chat":    0.2 / 1000 * USD,
+	"llama-3-sonar-small-32k-online":  0.2 / 1000 * USD,
+	"llama-3-sonar-large-32k-chat":    1 / 1000 * USD,
+	"llama-3-sonar-large-32k-online":  1 / 1000 * USD,
 }
 
 var DefaultModelPrice = map[string]float64{
+	"dall-e-2":          0.02,
+	"dall-e-3":          0.04,
 	"gpt-4-gizmo-*":     0.1,
 	"mj_imagine":        0.1,
 	"mj_variation":      0.1,
@@ -160,7 +195,8 @@ func UpdateModelPriceByJSONString(jsonStr string) error {
 	return json.Unmarshal([]byte(jsonStr), &modelPrice)
 }
 
-func GetModelPrice(name string, printErr bool) float64 {
+// GetModelPrice 返回模型的价格，如果模型不存在则返回-1，false
+func GetModelPrice(name string, printErr bool) (float64, bool) {
 	if modelPrice == nil {
 		modelPrice = DefaultModelPrice
 	}
@@ -172,9 +208,16 @@ func GetModelPrice(name string, printErr bool) float64 {
 		if printErr {
 			SysError("model price not found: " + name)
 		}
-		return -1
+		return -1, false
 	}
-	return price
+	return price, true
+}
+
+func GetModelPrices() map[string]float64 {
+	if modelPrice == nil {
+		modelPrice = DefaultModelPrice
+	}
+	return modelPrice
 }
 
 func ModelRatio2JSONString() string {
@@ -208,6 +251,13 @@ func GetModelRatio(name string) float64 {
 	return ratio
 }
 
+func GetModelRatios() map[string]float64 {
+	if modelRatio == nil {
+		modelRatio = DefaultModelRatio
+	}
+	return modelRatio
+}
+
 func CompletionRatio2JSONString() string {
 	if CompletionRatio == nil {
 		CompletionRatio = DefaultCompletionRatio
@@ -225,6 +275,9 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 }
 
 func GetCompletionRatio(name string) float64 {
+	if strings.HasPrefix(name, "gpt-4-gizmo") {
+		name = "gpt-4-gizmo-*"
+	}
 	if strings.HasPrefix(name, "gpt-3.5") {
 		if name == "gpt-3.5-turbo" || strings.HasSuffix(name, "0125") {
 			// https://openai.com/blog/new-embedding-models-and-api-updates
@@ -236,8 +289,8 @@ func GetCompletionRatio(name string) float64 {
 		}
 		return 4.0 / 3.0
 	}
-	if strings.HasPrefix(name, "gpt-4") && name != "gpt-4-all" && !strings.HasPrefix(name, "gpt-4-gizmo") {
-		if strings.HasPrefix(name, "gpt-4-turbo") || strings.HasSuffix(name, "preview") {
+	if strings.HasPrefix(name, "gpt-4") && name != "gpt-4-all" && name != "gpt-4-gizmo-*" {
+		if strings.HasPrefix(name, "gpt-4-turbo") || strings.HasSuffix(name, "preview") || strings.HasPrefix(name, "gpt-4o") {
 			return 3
 		}
 		return 2
@@ -268,6 +321,15 @@ func GetCompletionRatio(name string) float64 {
 	if strings.HasPrefix(name, "deepseek") {
 		return 2
 	}
+	if strings.HasPrefix(name, "ERNIE-Speed-") {
+		return 2
+	} else if strings.HasPrefix(name, "ERNIE-Lite-") {
+		return 2
+	} else if strings.HasPrefix(name, "ERNIE-Character") {
+		return 2
+	} else if strings.HasPrefix(name, "ERNIE-Functions") {
+		return 2
+	}
 	switch name {
 	case "llama2-70b-4096":
 		return 0.8 / 0.64
@@ -280,4 +342,11 @@ func GetCompletionRatio(name string) float64 {
 		return ratio
 	}
 	return 1
+}
+
+func GetCompletionRatios() map[string]float64 {
+	if CompletionRatio == nil {
+		CompletionRatio = DefaultCompletionRatio
+	}
+	return CompletionRatio
 }
