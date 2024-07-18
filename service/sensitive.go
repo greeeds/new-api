@@ -1,15 +1,58 @@
 package service
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"github.com/anknown/ahocorasick"
 	"one-api/constant"
+	"one-api/dto"
 	"strings"
 )
 
-const DEFAULT_WORD = "**###**"
-const SPLIT_KEY = "$$"
+func CheckSensitiveMessages(messages []dto.Message) error {
+	for _, message := range messages {
+		if len(message.Content) > 0 {
+			if message.IsStringContent() {
+				stringContent := message.StringContent()
+				if ok, words := SensitiveWordContains(stringContent); ok {
+					return errors.New("sensitive words: " + strings.Join(words, ","))
+				}
+			}
+		} else {
+			arrayContent := message.ParseContent()
+			for _, m := range arrayContent {
+				if m.Type == "image_url" {
+					// TODO: check image url
+				} else {
+					if ok, words := SensitiveWordContains(m.Text); ok {
+						return errors.New("sensitive words: " + strings.Join(words, ","))
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func CheckSensitiveText(text string) error {
+	if ok, words := SensitiveWordContains(text); ok {
+		return errors.New("sensitive words: " + strings.Join(words, ","))
+	}
+	return nil
+}
+
+func CheckSensitiveInput(input any) error {
+	switch v := input.(type) {
+	case string:
+		return CheckSensitiveText(v)
+	case []string:
+		text := ""
+		for _, s := range v {
+			text += s
+		}
+		return CheckSensitiveText(text)
+	}
+	return CheckSensitiveText(fmt.Sprintf("%v", input))
+}
 
 // SensitiveWordContains 是否包含敏感词，返回是否包含敏感词和敏感词列表
 func SensitiveWordContains(text string) (bool, []string) {
@@ -18,7 +61,7 @@ func SensitiveWordContains(text string) (bool, []string) {
 	}
 	checkText := strings.ToLower(text)
 	// 构建一个AC自动机
-	m := initAc()
+	m := InitAc()
 	hits := m.MultiPatternSearch([]rune(checkText), false)
 	if len(hits) > 0 {
 		words := make([]string, 0)
@@ -36,64 +79,17 @@ func SensitiveWordReplace(text string, returnImmediately bool) (bool, []string, 
 		return false, nil, text
 	}
 	checkText := strings.ToLower(text)
-	m := initAc()
+	m := InitAc()
 	hits := m.MultiPatternSearch([]rune(checkText), returnImmediately)
-	replaceWordMap := replaceMap()
 	if len(hits) > 0 {
-		textRunes := []rune(text)
-		words := make([]string, 0, len(hits))
-		var builder strings.Builder
-		posOffset := 0
+		words := make([]string, 0)
 		for _, hit := range hits {
 			pos := hit.Pos
 			word := string(hit.Word)
-			replaceWord := replaceWordMap[word]
-			builder.WriteString(string(textRunes[posOffset:pos]))
-			builder.WriteString(replaceWord)
-			posOffset = pos + len([]rune(word))
+			text = text[:pos] + "**###**" + text[pos+len(word):]
 			words = append(words, word)
 		}
-		builder.WriteString(string(textRunes[posOffset:]))
-		return true, words, builder.String()
+		return true, words, text
 	}
 	return false, nil, text
-}
-
-func initAc() *goahocorasick.Machine {
-	m := new(goahocorasick.Machine)
-	dict := readRunes()
-	if err := m.Build(dict); err != nil {
-		fmt.Println(err)
-		return nil
-	}
-	return m
-}
-
-func readRunes() [][]rune {
-	var dict [][]rune
-
-	for _, word := range constant.SensitiveWords {
-		word = strings.ToLower(strings.Split(word, SPLIT_KEY)[0])
-		l := bytes.TrimSpace([]byte(word))
-		dict = append(dict, bytes.Runes(l))
-	}
-
-	return dict
-}
-
-func replaceMap() map[string]string {
-	result := make(map[string]string)
-	for _, word := range constant.SensitiveWords {
-		if strings.Contains(word, SPLIT_KEY) {
-			parts := strings.Split(word, SPLIT_KEY)
-			if len(parts) == 2 {
-				result[strings.ToLower(parts[0])] = parts[1]
-			} else {
-				result[strings.ToLower(parts[0])] = ""
-			}
-		} else {
-			result[strings.ToLower(word)] = DEFAULT_WORD
-		}
-	}
-	return result
 }

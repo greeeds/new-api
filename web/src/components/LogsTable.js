@@ -30,6 +30,7 @@ import {
   stringToColor,
 } from '../helpers/render';
 import Paragraph from '@douyinfe/semi-ui/lib/es/typography/paragraph';
+import {getLogOther} from "../helpers/other.js";
 
 const { Header } = Layout;
 
@@ -142,6 +143,33 @@ function renderUseTime(type) {
   }
 }
 
+function renderFirstUseTime(type) {
+  let time = parseFloat(type) / 1000.0;
+  time = time.toFixed(1)
+  if (time < 3) {
+    return (
+        <Tag color='green' size='large'>
+          {' '}
+          {time} s{' '}
+        </Tag>
+    );
+  } else if (time < 10) {
+    return (
+        <Tag color='orange' size='large'>
+          {' '}
+          {time} s{' '}
+        </Tag>
+    );
+  } else {
+    return (
+        <Tag color='red' size='large'>
+          {' '}
+          {time} s{' '}
+        </Tag>
+    );
+  }
+}
+
 const LogsTable = () => {
   const columns = [
     {
@@ -248,17 +276,30 @@ const LogsTable = () => {
       },
     },
     {
-      title: '用时',
+      title: '用时/首字',
       dataIndex: 'use_time',
       render: (text, record, index) => {
-        return (
-          <div>
-            <Space>
-              {renderUseTime(text)}
-              {renderIsStream(record.is_stream)}
-            </Space>
-          </div>
-        );
+        if (record.is_stream) {
+          let other = getLogOther(record.other);
+          return (
+              <div>
+                <Space>
+                  {renderUseTime(text)}
+                  {renderFirstUseTime(other.frt)}
+                  {renderIsStream(record.is_stream)}
+                </Space>
+              </div>
+          );
+        } else {
+          return (
+              <div>
+                <Space>
+                  {renderUseTime(text)}
+                  {renderIsStream(record.is_stream)}
+                </Space>
+              </div>
+          );
+        }
       },
     },
     {
@@ -303,6 +344,9 @@ const LogsTable = () => {
         let content = '渠道：' + record.channel;
         if (record.other !== '') {
           let other = JSON.parse(record.other);
+          if (other === null) {
+            return <></>
+          }
           if (other.admin_info !== undefined) {
             if (
               other.admin_info.use_channel !== null &&
@@ -323,7 +367,8 @@ const LogsTable = () => {
       title: '详情',
       dataIndex: 'content',
       render: (text, record, index) => {
-        if (record.other === '') {
+        let other = getLogOther(record.other);
+        if (other == null || record.type !== 2) {
           return (
             <Paragraph
               ellipsis={{
@@ -339,7 +384,6 @@ const LogsTable = () => {
             </Paragraph>
           );
         }
-        let other = JSON.parse(record.other);
         let content = renderModelPrice(
           record.prompt_tokens,
           record.completion_tokens,

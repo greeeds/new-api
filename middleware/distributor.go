@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"one-api/common"
@@ -25,6 +26,10 @@ func Distribute() func(c *gin.Context) {
 		var channel *model.Channel
 		channelId, ok := c.Get("specific_channel_id")
 		modelRequest, shouldSelectChannel, err := getModelRequest(c)
+		if err != nil {
+			abortWithOpenAiMessage(c, http.StatusBadRequest, "Invalid request, "+err.Error())
+			return
+		}
 		userGroup, _ := model.CacheGetUserGroup(userId)
 		c.Set("group", userGroup)
 		if ok {
@@ -125,12 +130,23 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 			modelRequest.Model = midjourneyModel
 		}
 		c.Set("relay_mode", relayMode)
+	} else if strings.Contains(c.Request.URL.Path, "/suno/") {
+		relayMode := relayconstant.Path2RelaySuno(c.Request.Method, c.Request.URL.Path)
+		if relayMode == relayconstant.RelayModeSunoFetch ||
+			relayMode == relayconstant.RelayModeSunoFetchByID {
+			shouldSelectChannel = false
+		} else {
+			modelName := service.CoverTaskActionToModelName(constant.TaskPlatformSuno, c.Param("action"))
+			modelRequest.Model = modelName
+		}
+		c.Set("platform", string(constant.TaskPlatformSuno))
+		c.Set("relay_mode", relayMode)
 	} else if !strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") {
 		err = common.UnmarshalBodyReusable(c, &modelRequest)
 	}
 	if err != nil {
 		abortWithOpenAiMessage(c, http.StatusBadRequest, "无效的请求, "+err.Error())
-		return nil, false, err
+		return nil, false, errors.New("无效的请求, " + err.Error())
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/moderations") {
 		if modelRequest.Model == "" {
@@ -143,18 +159,22 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		}
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
-		if modelRequest.Model == "" {
-			modelRequest.Model = "dall-e"
-		}
+		modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "dall-e")
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
-		if modelRequest.Model == "" {
-			if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/speech") {
-				modelRequest.Model = "tts-1"
-			} else {
-				modelRequest.Model = "whisper-1"
-			}
+		relayMode := relayconstant.RelayModeAudioSpeech
+		if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/speech") {
+			modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "tts-1")
+		} else if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
+			modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, c.PostForm("model"))
+			modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "whisper-1")
+			relayMode = relayconstant.RelayModeAudioTranslation
+		} else if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") {
+			modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, c.PostForm("model"))
+			modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "whisper-1")
+			relayMode = relayconstant.RelayModeAudioTranscription
 		}
+		c.Set("relay_mode", relayMode)
 	}
 	return &modelRequest, shouldSelectChannel, nil
 }
@@ -167,6 +187,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set("channel", channel.Type)
 	c.Set("channel_id", channel.Id)
 	c.Set("channel_name", channel.Name)
+	c.Set("channel_type", channel.Type)
 	ban := true
 	// parse *int to bool
 	if channel.AutoBan != nil && *channel.AutoBan == 0 {
@@ -186,11 +207,11 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 		c.Set("api_version", channel.Other)
 	case common.ChannelTypeXunfei:
 		c.Set("api_version", channel.Other)
-	//case common.ChannelTypeAIProxyLibrary:
-	//	c.Set("library_id", channel.Other)
 	case common.ChannelTypeGemini:
 		c.Set("api_version", channel.Other)
 	case common.ChannelTypeAli:
 		c.Set("plugin", channel.Other)
+	case common.ChannelCloudflare:
+		c.Set("api_version", channel.Other)
 	}
 }

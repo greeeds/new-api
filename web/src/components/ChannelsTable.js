@@ -96,7 +96,23 @@ const ChannelsTable = () => {
       title: '状态',
       dataIndex: 'status',
       render: (text, record, index) => {
-        return <div>{renderStatus(text)}</div>;
+        if (text === 3) {
+          if (record.other_info === '') {
+            record.other_info = '{}'
+          }
+          let otherInfo = JSON.parse(record.other_info);
+          let reason = otherInfo['status_reason'];
+          let time = otherInfo['status_time'];
+          return (
+            <div>
+              <Tooltip content={'原因：' + reason + '，时间：' + timestamp2string(time)}>
+                {renderStatus(text)}
+              </Tooltip>
+            </div>
+          );
+        } else {
+          return renderStatus(text);
+        }
       },
     },
     {
@@ -310,12 +326,12 @@ const ChannelsTable = () => {
 
   const setChannelFormat = (channels) => {
     for (let i = 0; i < channels.length; i++) {
-      if (channels[i].type === 8) {
-        showWarning(
-          '检测到您使用了“自定义渠道”类型，请更换为“OpenAI”渠道类型！',
-        );
-        showWarning('下个版本将不再支持“自定义渠道”类型！');
-      }
+      // if (channels[i].type === 8) {
+      //   showWarning(
+      //     '检测到您使用了“自定义渠道”类型，请更换为“OpenAI”渠道类型！',
+      //   );
+      //   showWarning('下个版本将不再支持“自定义渠道”类型！');
+      // }
       channels[i].key = '' + channels[i].id;
       let test_models = [];
       channels[i].models.split(',').forEach((item, index) => {
@@ -534,7 +550,7 @@ const ChannelsTable = () => {
     );
     const { success, message, data } = res.data;
     if (success) {
-      setChannels(data);
+      setChannelFormat(data);
       setActivePage(1);
     } else {
       showError(message);

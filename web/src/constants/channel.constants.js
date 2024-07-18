@@ -14,6 +14,13 @@ export const CHANNEL_OPTIONS = [
     color: 'blue',
     label: 'Midjourney Proxy Plus',
   },
+  {
+    key: 36,
+    text: 'Suno API',
+    value: 36,
+    color: 'purple',
+    label: 'Suno API',
+  },
   { key: 4, text: 'Ollama', value: 4, color: 'grey', label: 'Ollama' },
   {
     key: 14,
@@ -92,11 +99,14 @@ export const CHANNEL_OPTIONS = [
     color: 'orange',
     label: 'Google PaLM2',
   },
+  { key: 39, text: 'Cloudflare', value: 39, color: 'grey', label: 'Cloudflare' },
   { key: 25, text: 'Moonshot', value: 25, color: 'green', label: 'Moonshot' },
   { key: 19, text: '360 智脑', value: 19, color: 'blue', label: '360 智脑' },
   { key: 23, text: '腾讯混元', value: 23, color: 'teal', label: '腾讯混元' },
   { key: 31, text: '零一万物', value: 31, color: 'green', label: '零一万物' },
   { key: 35, text: 'MiniMax', value: 35, color: 'green', label: 'MiniMax' },
+  { key: 37, text: 'Dify', value: 37, color: 'teal', label: 'Dify' },
+  { key: 38, text: 'Jina', value: 38, color: 'blue', label: 'Jina' },
   { key: 8, text: '自定义渠道', value: 8, color: 'pink', label: '自定义渠道' },
   {
     key: 22,

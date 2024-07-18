@@ -131,7 +131,7 @@ func init() {
 		}
 		meta := &relaycommon.RelayInfo{ChannelType: i}
 		adaptor := relay.GetAdaptor(apiType)
-		adaptor.Init(meta, dto.GeneralOpenAIRequest{})
+		adaptor.Init(meta)
 		channelId2Models[i] = adaptor.GetModelList()
 	}
 }
@@ -199,19 +199,4 @@ func RetrieveModel(c *gin.Context) {
 			"error": openAIError,
 		})
 	}
-}
-
-func GetPricing(c *gin.Context) {
-	userId := c.GetInt("id")
-	group, err := model.CacheGetUserGroup(userId)
-	groupRatio := common.GetGroupRatio("default")
-	if err != nil {
-		groupRatio = common.GetGroupRatio(group)
-	}
-	pricing := model.GetPricing(group)
-	c.JSON(200, gin.H{
-		"success":     true,
-		"data":        pricing,
-		"group_ratio": groupRatio,
-	})
 }

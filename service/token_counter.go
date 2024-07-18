@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linux-do/tiktoken-go"
+	"github.com/pkoukk/tiktoken-go"
 	"image"
 	"log"
 	"math"
 	"one-api/common"
-	"one-api/constant"
 	"one-api/dto"
 	"strings"
 	"unicode/utf8"
@@ -18,6 +17,7 @@ import (
 // tokenEncoderMap won't grow after initialization
 var tokenEncoderMap = map[string]*tiktoken.Tiktoken{}
 var defaultTokenEncoder *tiktoken.Tiktoken
+var cl200kTokenEncoder *tiktoken.Tiktoken
 
 func InitTokenEncoders() {
 	common.SysLog("initializing token encoders")
@@ -27,16 +27,19 @@ func InitTokenEncoders() {
 	}
 	defaultTokenEncoder = gpt35TokenEncoder
 	gpt4TokenEncoder, err := tiktoken.EncodingForModel("gpt-4")
-	gpt4oTokenEncoder, err := tiktoken.EncodingForModel("gpt-4o")
 	if err != nil {
 		common.FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
 	}
-	for model, _ := range common.DefaultModelRatio {
+	cl200kTokenEncoder, err = tiktoken.EncodingForModel("gpt-4o")
+	if err != nil {
+		common.FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
+	}
+	for model, _ := range common.GetDefaultModelRatioMap() {
 		if strings.HasPrefix(model, "gpt-3.5") {
 			tokenEncoderMap[model] = gpt35TokenEncoder
 		} else if strings.HasPrefix(model, "gpt-4") {
 			if strings.HasPrefix(model, "gpt-4o") {
-				tokenEncoderMap[model] = gpt4oTokenEncoder
+				tokenEncoderMap[model] = cl200kTokenEncoder
 			} else {
 				tokenEncoderMap[model] = gpt4TokenEncoder
 			}
@@ -47,21 +50,30 @@ func InitTokenEncoders() {
 	common.SysLog("token encoders initialized")
 }
 
+func getModelDefaultTokenEncoder(model string) *tiktoken.Tiktoken {
+	if strings.HasPrefix(model, "gpt-4o") {
+		return cl200kTokenEncoder
+	}
+	return defaultTokenEncoder
+}
+
 func getTokenEncoder(model string) *tiktoken.Tiktoken {
 	tokenEncoder, ok := tokenEncoderMap[model]
 	if ok && tokenEncoder != nil {
 		return tokenEncoder
 	}
+	// 如果ok（即model在tokenEncoderMap中），但是tokenEncoder为nil，说明可能是自定义模型
 	if ok {
 		tokenEncoder, err := tiktoken.EncodingForModel(model)
 		if err != nil {
 			common.SysError(fmt.Sprintf("failed to get token encoder for model %s: %s, using encoder for gpt-3.5-turbo", model, err.Error()))
-			tokenEncoder = defaultTokenEncoder
+			tokenEncoder = getModelDefaultTokenEncoder(model)
 		}
 		tokenEncoderMap[model] = tokenEncoder
 		return tokenEncoder
 	}
-	return defaultTokenEncoder
+	// 如果model不在tokenEncoderMap中，直接返回默认的tokenEncoder
+	return getModelDefaultTokenEncoder(model)
 }
 
 func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int {
@@ -76,15 +88,18 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	if imageUrl.Detail == "low" {
 		return 85, nil
 	}
+	// 同步One API的图片计费逻辑
+	if imageUrl.Detail == "auto" || imageUrl.Detail == "" {
+		imageUrl.Detail = "high"
+	}
 	var config image.Config
 	var err error
 	var format string
 	if strings.HasPrefix(imageUrl.Url, "http") {
-		common.SysLog(fmt.Sprintf("downloading image: %s", imageUrl.Url))
-		config, format, err = common.DecodeUrlImageData(imageUrl.Url)
+		config, format, err = DecodeUrlImageData(imageUrl.Url)
 	} else {
 		common.SysLog(fmt.Sprintf("decoding image"))
-		config, format, _, err = common.DecodeBase64ImageData(imageUrl.Url)
+		config, format, _, err = DecodeBase64ImageData(imageUrl.Url)
 	}
 	if err != nil {
 		return 0, err
@@ -93,14 +108,14 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	if config.Width == 0 || config.Height == 0 {
 		return 0, errors.New(fmt.Sprintf("fail to decode image config: %s", imageUrl.Url))
 	}
-	// TODO: 适配官方auto计费
-	if config.Width < 512 && config.Height < 512 {
-		if imageUrl.Detail == "auto" || imageUrl.Detail == "" {
-			// 如果图片尺寸小于512，强制使用low
-			imageUrl.Detail = "low"
-			return 85, nil
-		}
-	}
+	//// TODO: 适配官方auto计费
+	//if config.Width < 512 && config.Height < 512 {
+	//	if imageUrl.Detail == "auto" || imageUrl.Detail == "" {
+	//		// 如果图片尺寸小于512，强制使用low
+	//		imageUrl.Detail = "low"
+	//		return 85, nil
+	//	}
+	//}
 
 	shortSide := config.Width
 	otherSide := config.Height
@@ -126,11 +141,11 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	return tiles*170 + 85, nil
 }
 
-func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string, checkSensitive bool) (int, error, bool) {
+func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string) (int, error) {
 	tkm := 0
-	msgTokens, err, b := CountTokenMessages(request.Messages, model, request.Stream, checkSensitive)
+	msgTokens, err := CountTokenMessages(request.Messages, model, request.Stream)
 	if err != nil {
-		return 0, err, b
+		return 0, err
 	}
 	tkm += msgTokens
 	if request.Tools != nil {
@@ -138,7 +153,7 @@ func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string, check
 		var openaiTools []dto.OpenAITools
 		err := json.Unmarshal(toolsData, &openaiTools)
 		if err != nil {
-			return 0, errors.New(fmt.Sprintf("count_tools_token_fail: %s", err.Error())), false
+			return 0, errors.New(fmt.Sprintf("count_tools_token_fail: %s", err.Error()))
 		}
 		countStr := ""
 		for _, tool := range openaiTools {
@@ -150,18 +165,18 @@ func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string, check
 				countStr += fmt.Sprintf("%v", tool.Function.Parameters)
 			}
 		}
-		toolTokens, err, _ := CountTokenInput(countStr, model, false)
+		toolTokens, err := CountTokenInput(countStr, model)
 		if err != nil {
-			return 0, err, false
+			return 0, err
 		}
 		tkm += 8
 		tkm += toolTokens
 	}
 
-	return tkm, nil, false
+	return tkm, nil
 }
 
-func CountTokenMessages(messages []dto.Message, model string, stream bool, checkSensitive bool) (int, error, bool) {
+func CountTokenMessages(messages []dto.Message, model string, stream bool) (int, error) {
 	//recover when panic
 	tokenEncoder := getTokenEncoder(model)
 	// Reference:
@@ -185,13 +200,6 @@ func CountTokenMessages(messages []dto.Message, model string, stream bool, check
 		if len(message.Content) > 0 {
 			if message.IsStringContent() {
 				stringContent := message.StringContent()
-				if checkSensitive && constant.StopOnSensitiveEnabled {
-					contains, words := SensitiveWordContains(stringContent)
-					if contains {
-						err := fmt.Errorf("message contains sensitive words: [%s]", strings.Join(words, ", "))
-						return 0, err, true
-					}
-				}
 				tokenNum += getTokenNum(tokenEncoder, stringContent)
 				if message.Name != nil {
 					tokenNum += tokensPerName
@@ -204,7 +212,7 @@ func CountTokenMessages(messages []dto.Message, model string, stream bool, check
 						imageUrl := m.ImageUrl.(dto.MessageImageUrl)
 						imageTokenNum, err := getImageToken(&imageUrl, model, stream)
 						if err != nil {
-							return 0, err, false
+							return 0, err
 						}
 						tokenNum += imageTokenNum
 						log.Printf("image token num: %d", imageTokenNum)
@@ -216,33 +224,33 @@ func CountTokenMessages(messages []dto.Message, model string, stream bool, check
 		}
 	}
 	tokenNum += 3 // Every reply is primed with <|start|>assistant<|message|>
-	return tokenNum, nil, false
+	return tokenNum, nil
 }
 
-func CountTokenInput(input any, model string, check bool) (int, error, bool) {
+func CountTokenInput(input any, model string) (int, error) {
 	switch v := input.(type) {
 	case string:
-		return CountTokenText(v, model, check)
+		return CountTokenText(v, model)
 	case []string:
 		text := ""
 		for _, s := range v {
 			text += s
 		}
-		return CountTokenText(text, model, check)
+		return CountTokenText(text, model)
 	}
-	return CountTokenInput(fmt.Sprintf("%v", input), model, check)
+	return CountTokenInput(fmt.Sprintf("%v", input), model)
 }
 
 func CountTokenStreamChoices(messages []dto.ChatCompletionsStreamResponseChoice, model string) int {
 	tokens := 0
 	for _, message := range messages {
-		tkm, _, _ := CountTokenInput(message.Delta.GetContentString(), model, false)
+		tkm, _ := CountTokenInput(message.Delta.GetContentString(), model)
 		tokens += tkm
 		if message.Delta.ToolCalls != nil {
 			for _, tool := range message.Delta.ToolCalls {
-				tkm, _, _ := CountTokenInput(tool.Function.Name, model, false)
+				tkm, _ := CountTokenInput(tool.Function.Name, model)
 				tokens += tkm
-				tkm, _, _ = CountTokenInput(tool.Function.Arguments, model, false)
+				tkm, _ = CountTokenInput(tool.Function.Arguments, model)
 				tokens += tkm
 			}
 		}
@@ -250,29 +258,17 @@ func CountTokenStreamChoices(messages []dto.ChatCompletionsStreamResponseChoice,
 	return tokens
 }
 
-func CountAudioToken(text string, model string, check bool) (int, error, bool) {
+func CountAudioToken(text string, model string) (int, error) {
 	if strings.HasPrefix(model, "tts") {
-		contains, words := SensitiveWordContains(text)
-		if contains {
-			return utf8.RuneCountInString(text), fmt.Errorf("input contains sensitive words: [%s]", strings.Join(words, ",")), true
-		}
-		return utf8.RuneCountInString(text), nil, false
+		return utf8.RuneCountInString(text), nil
 	} else {
-		return CountTokenText(text, model, check)
+		return CountTokenText(text, model)
 	}
 }
 
 // CountTokenText 统计文本的token数量，仅当文本包含敏感词，返回错误，同时返回token数量
-func CountTokenText(text string, model string, check bool) (int, error, bool) {
+func CountTokenText(text string, model string) (int, error) {
 	var err error
-	var trigger bool
-	if check && constant.StopOnSensitiveEnabled {
-		contains, words := SensitiveWordContains(text)
-		if contains {
-			err = fmt.Errorf("input contains sensitive words: [%s]", strings.Join(words, ","))
-			trigger = true
-		}
-	}
 	tokenEncoder := getTokenEncoder(model)
-	return getTokenNum(tokenEncoder, text), err, trigger
+	return getTokenNum(tokenEncoder, text), err
 }

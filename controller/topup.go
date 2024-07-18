@@ -5,11 +5,10 @@ import (
 	"github.com/Calcium-Ion/go-epay/epay"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
-	"one-api/constant"
-
 	"log"
 	"net/url"
 	"one-api/common"
+	"one-api/constant"
 	"one-api/model"
 	"one-api/service"
 	"strconv"
@@ -92,7 +91,7 @@ func RequestEpay(c *gin.Context) {
 		payType = epay.WechatPay
 	}
 	callBackAddress := service.GetCallbackAddress()
-	returnUrl, _ := url.Parse(common.ServerAddress + "/log")
+	returnUrl, _ := url.Parse(constant.ServerAddress + "/log")
 	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	client := GetEpayClient()

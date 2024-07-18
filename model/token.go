@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"one-api/common"
+	"one-api/constant"
 	"strconv"
 	"strings"
 )
@@ -249,11 +250,9 @@ func PreConsumeTokenQuota(tokenId int, quota int) (userQuota int, err error) {
 	if userQuota < quota {
 		return 0, errors.New(fmt.Sprintf("用户额度不足，剩余额度为 %d", userQuota))
 	}
-	if !token.UnlimitedQuota {
-		err = DecreaseTokenQuota(tokenId, quota)
-		if err != nil {
-			return 0, err
-		}
+	err = DecreaseTokenQuota(tokenId, quota)
+	if err != nil {
+		return 0, err
 	}
 	err = DecreaseUserQuota(token.UserId, quota)
 	return userQuota - quota, err
@@ -271,15 +270,13 @@ func PostConsumeTokenQuota(tokenId int, userQuota int, quota int, preConsumedQuo
 		return err
 	}
 
-	if !token.UnlimitedQuota {
-		if quota > 0 {
-			err = DecreaseTokenQuota(tokenId, quota)
-		} else {
-			err = IncreaseTokenQuota(tokenId, -quota)
-		}
-		if err != nil {
-			return err
-		}
+	if quota > 0 {
+		err = DecreaseTokenQuota(tokenId, quota)
+	} else {
+		err = IncreaseTokenQuota(tokenId, -quota)
+	}
+	if err != nil {
+		return err
 	}
 
 	if sendEmail {
@@ -297,7 +294,7 @@ func PostConsumeTokenQuota(tokenId int, userQuota int, quota int, preConsumedQuo
 						prompt = "您的额度已用尽"
 					}
 					if email != "" {
-						topUpLink := fmt.Sprintf("%s/topup", common.ServerAddress)
+						topUpLink := fmt.Sprintf("%s/topup", constant.ServerAddress)
 						err = common.SendEmail(prompt, email,
 							fmt.Sprintf("%s，当前剩余额度为 %d，为了不影响您的使用，请及时充值。<br/>充值链接：<a href='%s'>%s</a>", prompt, userQuota, topUpLink, topUpLink))
 						if err != nil {

@@ -13,7 +13,9 @@ import (
 	relaymodel "one-api/dto"
 	"one-api/relay/channel/claude"
 	relaycommon "one-api/relay/common"
+	"one-api/service"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -111,7 +113,7 @@ func awsHandler(c *gin.Context, info *relaycommon.RelayInfo, requestMode int) (*
 	return nil, &usage
 }
 
-func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, requestMode int) (*relaymodel.OpenAIErrorWithStatusCode, *relaymodel.Usage) {
+func awsStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*relaymodel.OpenAIErrorWithStatusCode, *relaymodel.Usage) {
 	awsCli, err := newAwsClient(c, info)
 	if err != nil {
 		return wrapErr(errors.Wrap(err, "newAwsClient")), nil
@@ -156,16 +158,20 @@ func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, requestMode i
 	var usage relaymodel.Usage
 	var id string
 	var model string
+	isFirst := true
 	createdTime := common.GetTimestamp()
 	c.Stream(func(w io.Writer) bool {
 		event, ok := <-stream.Events()
 		if !ok {
-			c.Render(-1, common.CustomEvent{Data: "data: [DONE]"})
 			return false
 		}
 
 		switch v := event.(type) {
 		case *types.ResponseStreamMemberChunk:
+			if isFirst {
+				isFirst = false
+				info.FirstResponseTime = time.Now()
+			}
 			claudeResp := new(claude.ClaudeResponse)
 			err := json.NewDecoder(bytes.NewReader(v.Value.Bytes)).Decode(claudeResp)
 			if err != nil {
@@ -208,6 +214,17 @@ func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, requestMode i
 			return false
 		}
 	})
-
+	if info.ShouldIncludeUsage {
+		response := service.GenerateFinalUsageResponse(id, createdTime, info.UpstreamModelName, usage)
+		err := service.ObjectData(c, response)
+		if err != nil {
+			common.SysError("send final response failed: " + err.Error())
+		}
+	}
+	service.Done(c)
+	err = resp.Body.Close()
+	if err != nil {
+		return service.OpenAIErrorWrapperLocal(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
 	return nil, &usage
 }

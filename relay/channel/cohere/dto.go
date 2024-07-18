@@ -1,11 +1,13 @@
 package cohere
 
+import "one-api/dto"
+
 type CohereRequest struct {
 	Model       string        `json:"model"`
 	ChatHistory []ChatHistory `json:"chat_history"`
 	Message     string        `json:"message"`
 	Stream      bool          `json:"stream"`
-	MaxTokens   int64         `json:"max_tokens"`
+	MaxTokens   int           `json:"max_tokens"`
 }
 
 type ChatHistory struct {
@@ -26,6 +28,19 @@ type CohereResponseResult struct {
 	FinishReason string     `json:"finish_reason,omitempty"`
 	Text         string     `json:"text"`
 	Meta         CohereMeta `json:"meta"`
+}
+
+type CohereRerankRequest struct {
+	Documents       []any  `json:"documents"`
+	Query           string `json:"query"`
+	Model           string `json:"model"`
+	TopN            int    `json:"top_n"`
+	ReturnDocuments bool   `json:"return_documents"`
+}
+
+type CohereRerankResponseResult struct {
+	Results []dto.RerankResponseDocument `json:"results"`
+	Meta    CohereMeta                   `json:"meta"`
 }
 
 type CohereMeta struct {

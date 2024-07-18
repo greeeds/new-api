@@ -111,7 +111,7 @@ func coverMidjourneyTaskDto(c *gin.Context, originTask *model.Midjourney) (midjo
 	midjourneyTask.FinishTime = originTask.FinishTime
 	midjourneyTask.ImageUrl = ""
 	if originTask.ImageUrl != "" && constant.MjForwardUrlEnabled {
-		midjourneyTask.ImageUrl = common.ServerAddress + "/mj/image/" + originTask.MjId
+		midjourneyTask.ImageUrl = constant.ServerAddress + "/mj/image/" + originTask.MjId
 		if originTask.Status != "SUCCESS" {
 			midjourneyTask.ImageUrl += "?rand=" + strconv.FormatInt(time.Now().UnixNano(), 10)
 		}
@@ -158,7 +158,7 @@ func RelaySwapFace(c *gin.Context) *dto.MidjourneyResponse {
 	modelPrice, success := common.GetModelPrice(modelName, true)
 	// 如果没有配置价格，则使用默认价格
 	if !success {
-		defaultPrice, ok := common.DefaultModelPrice[modelName]
+		defaultPrice, ok := common.GetDefaultModelRatioMap()[modelName]
 		if !ok {
 			modelPrice = 0.1
 		} else {
@@ -416,9 +416,12 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 		originTask := model.GetByMJId(userId, mjId)
 		if originTask == nil {
 			return service.MidjourneyErrorWrapper(constant.MjRequestError, "task_not_found")
-		} else if originTask.Status != "SUCCESS" && relayMode != relayconstant.RelayModeMidjourneyModal {
-			return service.MidjourneyErrorWrapper(constant.MjRequestError, "task_status_not_success")
 		} else { //原任务的Status=SUCCESS，则可以做放大UPSCALE、变换VARIATION等动作，此时必须使用原来的请求地址才能正确处理
+			if constant.MjActionCheckSuccessEnabled {
+				if originTask.Status != "SUCCESS" && relayMode != relayconstant.RelayModeMidjourneyModal {
+					return service.MidjourneyErrorWrapper(constant.MjRequestError, "task_status_not_success")
+				}
+			}
 			channel, err := model.GetChannelById(originTask.ChannelId, true)
 			if err != nil {
 				return service.MidjourneyErrorWrapper(constant.MjRequestError, "get_channel_info_failed")
@@ -458,7 +461,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 	modelPrice, success := common.GetModelPrice(modelName, true)
 	// 如果没有配置价格，则使用默认价格
 	if !success {
-		defaultPrice, ok := common.DefaultModelPrice[modelName]
+		defaultPrice, ok := common.GetDefaultModelRatioMap()[modelName]
 		if !ok {
 			modelPrice = 0.1
 		} else {
@@ -501,7 +504,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 			}
 			if quota != 0 {
 				tokenName := c.GetString("token_name")
-				logContent := fmt.Sprintf("模型固定价格 %.2f，分组倍率 %.2f，操作 %s", modelPrice, groupRatio, midjRequest.Action)
+				logContent := fmt.Sprintf("模型固定价格 %.2f，分组倍率 %.2f，操作 %s，ID %s", modelPrice, groupRatio, midjRequest.Action, midjResponse.Result)
 				var bodyContent string
 				bodyContent = ""
 				jsonData, err := json.Marshal(midjRequest)
@@ -549,7 +552,16 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 		ChannelId:   c.GetInt("channel_id"),
 		Quota:       quota,
 	}
-
+	if midjResponse.Code == 3 {
+		//无实例账号自动禁用渠道（No available account instance）
+		channel, err := model.GetChannelById(midjourneyTask.ChannelId, true)
+		if err != nil {
+			common.SysError("get_channel_null: " + err.Error())
+		}
+		if channel.AutoBan != nil && *channel.AutoBan == 1 && common.AutomaticDisableChannelEnabled {
+			model.UpdateChannelStatusById(midjourneyTask.ChannelId, 2, "No available account instance")
+		}
+	}
 	if midjResponse.Code != 1 && midjResponse.Code != 21 && midjResponse.Code != 22 {
 		//非1-提交成功,21-任务已存在和22-排队中，则记录错误原因
 		midjourneyTask.FailReason = midjResponse.Description
