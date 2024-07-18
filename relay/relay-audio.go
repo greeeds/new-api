@@ -102,6 +102,7 @@ func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[audioRequest.Model] != "" {
+			audioRequest.SourceModel = audioRequest.Model
 			audioRequest.Model = modelMap[audioRequest.Model]
 		}
 	}
@@ -142,7 +143,7 @@ func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 		return openaiErr
 	}
 
-	postConsumeQuota(c, relayInfo, audioRequest.Model, usage, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, 0, false, "")
+	postConsumeQuota(c, relayInfo, audioRequest.Model, usage, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, 0, false, "", audioRequest.SourceModel, "")
 
 	return nil
 }

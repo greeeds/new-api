@@ -188,7 +188,13 @@ func TextHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	postConsumeQuota(c, relayInfo, textRequest.Model, usage, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "")
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(textRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
+	postConsumeQuota(c, relayInfo, textRequest.Model, usage, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "", textRequest.SourceModel, bodyContent)
 	return nil
 }
 
@@ -280,7 +286,7 @@ func returnPreConsumedQuota(c *gin.Context, tokenId int, userQuota int, preConsu
 
 func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelName string,
 	usage *dto.Usage, ratio float64, preConsumedQuota int, userQuota int, modelRatio float64, groupRatio float64,
-	modelPrice float64, usePrice bool, extraContent string) {
+	modelPrice float64, usePrice bool, extraContent string, sourceModel string, bodyContent string) {
 
 	useTimeSeconds := time.Now().Unix() - relayInfo.StartTime.Unix()
 	promptTokens := usage.PromptTokens
@@ -343,14 +349,8 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelN
 		logContent += ", " + extraContent
 	}
 	other := service.GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, modelPrice)
-	if len(textRequest.SourceModel) > 0 && textRequest.SourceModel != textRequest.Model {
-		logModel += "[" + textRequest.SourceModel + "]"
-	}
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err := json.Marshal(textRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
+	if len(sourceModel) > 0 && sourceModel != modelName {
+		logModel += "[" + sourceModel + "]"
 	}
 	model.RecordConsumeLog(ctx, relayInfo.UserId, relayInfo.ChannelId, promptTokens, completionTokens, logModel,
 		tokenName, quota, logContent, relayInfo.TokenId, userQuota, int(useTimeSeconds), relayInfo.IsStream, other, bodyContent)

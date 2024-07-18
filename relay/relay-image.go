@@ -85,6 +85,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[imageRequest.Model] != "" {
+			imageRequest.SourceModel = imageRequest.Model
 			imageRequest.Model = modelMap[imageRequest.Model]
 		}
 	}
@@ -180,7 +181,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	logContent := fmt.Sprintf("大小 %s, 品质 %s", imageRequest.Size, quality)
-	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, modelPrice, true, logContent)
+	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, modelPrice, true, logContent, imageRequest.SourceModel, "")
 
 	return nil
 }

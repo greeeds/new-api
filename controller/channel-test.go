@@ -67,6 +67,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	}
 
 	c.Request.Header.Set("Authorization", "Bearer "+channel.Key)
+	c.Request.Header.Set("User-Agent", c.Request.Header.Get("User-Agent"))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Set("channel", channel.Type)
 	c.Set("base_url", channel.GetBaseURL())
@@ -135,7 +136,8 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	milliseconds := tok.Sub(tik).Milliseconds()
 	consumedTime := float64(milliseconds) / 1000.0
 	other := service.GenerateTextOtherInfo(c, meta, modelRatio, 1, completionRatio, modelPrice)
-	model.RecordConsumeLog(c, 1, channel.Id, usage.PromptTokens, usage.CompletionTokens, testModel, "模型测试", quota, "模型测试", 0, quota, int(consumedTime), false, other)
+	var bodyContent = string(jsonData)
+	model.RecordConsumeLog(c, 1, channel.Id, usage.PromptTokens, usage.CompletionTokens, testModel, "模型测试", quota, "模型测试", 0, quota, int(consumedTime), false, other, bodyContent)
 	common.SysLog(fmt.Sprintf("testing channel #%d, response: \n%s", channel.Id, string(respBody)))
 	return nil, nil
 }
