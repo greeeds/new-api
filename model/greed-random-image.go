@@ -6,7 +6,7 @@ type GreedImage struct {
 }
 
 func GetGreedRandomImageUrlByNum(num int) (greedImage *GreedImage, err error) {
-	err = DB.Limit(num).Offset(1).Omit("id").Find(&greedImage).Error
+	err = DB.Limit(1).Offset(num).Omit("id").Find(&greedImage).Error
 	return greedImage, err
 }
 
