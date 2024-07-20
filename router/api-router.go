@@ -146,5 +146,9 @@ func SetApiRouter(router *gin.Engine) {
 			taskRoute.GET("/self", middleware.UserAuth(), controller.GetUserTask)
 			taskRoute.GET("/", middleware.AdminAuth(), controller.GetAllTask)
 		}
+		greedRoute := apiRouter.Group("/greed")
+		{
+			greedRoute.GET("/random/image", controller.GetGreedRandomImageUrlByNum)
+		}
 	}
 }
