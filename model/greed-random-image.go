@@ -1,5 +1,7 @@
 package model
 
+import "one-api/common"
+
 type GreedImage struct {
 	Id  int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Url string `json:"url" gorm:"size:500;unique;comment:url"`
@@ -16,4 +18,15 @@ func GetGreedRandomImageTotal() (total int64, err error) {
 		return 0, err
 	}
 	return total, err
+}
+
+func AddGreedRandomImage(url string) (err error) {
+	greedImage := &GreedImage{
+		Url: url,
+	}
+	err = DB.Create(greedImage).Error
+	if err != nil {
+		common.SysError("failed to add greed-random-image: " + err.Error())
+	}
+	return err
 }

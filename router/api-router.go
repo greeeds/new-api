@@ -149,6 +149,7 @@ func SetApiRouter(router *gin.Engine) {
 		greedRoute := apiRouter.Group("/greed")
 		{
 			greedRoute.GET("/random/image", controller.GetGreedRandomImageUrlByNum)
+			greedRoute.POST("/random/image/add", controller.AddGreedRandomImage)
 		}
 	}
 }

@@ -1,11 +1,14 @@
 package controller
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"one-api/common"
 	"one-api/model"
+	"os"
 	"strconv"
 )
 
@@ -52,4 +55,47 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 		})
 		return
 	}
+}
+
+func AddGreedRandomImage(c *gin.Context) {
+	hehedaKey := os.Getenv("hehedaKey")
+	if hehedaKey != "" {
+		accessToken := c.Request.Header.Get("Heheda")
+		if accessToken != hehedaKey {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "unauthorized",
+			})
+			c.Abort()
+			return
+		}
+	}
+	var greedImage model.GreedImage
+	err := json.NewDecoder(c.Request.Body).Decode(&greedImage)
+	if err != nil || greedImage.Url == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "invalid parameter",
+		})
+		return
+	}
+	if err := common.Validate.Struct(&greedImage); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Input not legal: " + err.Error(),
+		})
+		return
+	}
+	if err := model.AddGreedRandomImage(greedImage.Url); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "failed to add greed-random-image: " + err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
 }
