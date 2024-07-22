@@ -18,16 +18,20 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 		num = 0
 	}
 	nsfw, _ := strconv.ParseBool(c.Query("nsfw"))
+	var total = int64(0)
 	if num == 0 {
-		total, _ := model.GetGreedRandomImageTotal(nsfw)
+		total, _ = model.GetGreedRandomImageTotal(nsfw)
 		num = rand.IntN(int(total))
 	}
 	showTotal, _ := strconv.ParseBool(c.Query("total"))
 	if showTotal {
+		if total == 0 {
+			total, _ = model.GetGreedRandomImageTotal(nsfw)
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "",
-			"data":    showTotal,
+			"data":    total,
 		})
 		return
 	}
