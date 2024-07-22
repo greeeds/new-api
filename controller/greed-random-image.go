@@ -17,11 +17,12 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	if num < 0 {
 		num = 0
 	}
+	nsfw, _ := strconv.ParseBool(c.Query("nsfw"))
 	if num == 0 {
-		total, _ := model.GetGreedRandomImageTotal()
+		total, _ := model.GetGreedRandomImageTotal(nsfw)
 		num = rand.IntN(int(total))
 	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num)
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -86,7 +87,7 @@ func AddGreedRandomImage(c *gin.Context) {
 		})
 		return
 	}
-	if err := model.AddGreedRandomImage(greedImage.Url); err != nil {
+	if err := model.AddGreedRandomImage(greedImage.Url, greedImage.Nsfw); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "failed to add greed-random-image: " + err.Error(),
