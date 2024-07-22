@@ -22,6 +22,15 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 		total, _ := model.GetGreedRandomImageTotal(nsfw)
 		num = rand.IntN(int(total))
 	}
+	showTotal, _ := strconv.ParseBool(c.Query("total"))
+	if showTotal {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "",
+			"data":    showTotal,
+		})
+		return
+	}
 	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
