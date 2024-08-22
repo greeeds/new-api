@@ -79,6 +79,49 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	}
 }
 
+func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
+	num, _ := strconv.Atoi(c.Query("num"))
+	if num < 0 {
+		num = 0
+	}
+	nsfw64, err := strconv.ParseUint(c.Query("nsfw"), 10, 8)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	nsfw := uint8(nsfw64)
+	var total = int64(0)
+	if num == 0 {
+		total, _ = model.GetGreedRandomImageTotal(nsfw)
+		num = rand.IntN(int(total))
+	}
+	showTotal, _ := strconv.ParseBool(c.Query("total"))
+	if showTotal {
+		if total == 0 {
+			total, _ = model.GetGreedRandomImageTotal(nsfw)
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "",
+			"data":    total,
+		})
+		return
+	}
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	// 使用 http.Redirect 重定向到新的 URL
+	http.Redirect(c.Writer, c.Request, greedImage.Url, http.StatusMovedPermanently)
+}
+
 func AddGreedRandomImage(c *gin.Context) {
 	hehedaKey := os.Getenv("hehedaKey")
 	if hehedaKey != "" {
