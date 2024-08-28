@@ -19,12 +19,18 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	}
 	nsfw := -1
 	if c.Query("nsfw") != "" {
-		nsfw64, _ := strconv.ParseUint(c.Query("nsfw"), 10, 8)
-		nsfw = int(nsfw64)
+		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
 	}
 	var total = int64(0)
 	if num == 0 {
 		total, _ = model.GetGreedRandomImageTotal(nsfw)
+		if total == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "No image found",
+			})
+			return
+		}
 		num = rand.IntN(int(total))
 	}
 	showTotal, _ := strconv.ParseBool(c.Query("total"))
@@ -85,12 +91,18 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 	}
 	nsfw := -1
 	if c.Query("nsfw") != "" {
-		nsfw64, _ := strconv.ParseUint(c.Query("nsfw"), 10, 8)
-		nsfw = int(nsfw64)
+		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
 	}
 	var total = int64(0)
 	if num == 0 {
 		total, _ = model.GetGreedRandomImageTotal(nsfw)
+		if total == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "No image found",
+			})
+			return
+		}
 		num = rand.IntN(int(total))
 	}
 	showTotal, _ := strconv.ParseBool(c.Query("total"))
