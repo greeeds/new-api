@@ -36,7 +36,7 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 		})
 		return
 	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw)
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, c.Query("keyword"))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -46,7 +46,7 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	}
 	// 下载图片
 	resp, err := http.Get(greedImage.Url)
-	if err != nil {
+	if resp == nil || err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "Failed to get image",
@@ -61,6 +61,9 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	}(resp.Body)
 	// 获取响应头中的 Content-Type
 	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" && greedImage.ContentType != "" {
+		contentType = greedImage.ContentType
+	}
 	c.Header("Content-Type", contentType)
 	// 将下载的文件流直接写入response流
 	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
@@ -96,11 +99,11 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 		})
 		return
 	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw)
-	if err != nil {
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, c.Query("keyword"))
+	if greedImage == nil || err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": "Failed to get image",
 		})
 		return
 	}
@@ -137,7 +140,7 @@ func AddGreedRandomImage(c *gin.Context) {
 		})
 		return
 	}
-	if err := model.AddGreedRandomImage(greedImage.Url, greedImage.Nsfw); err != nil {
+	if err := model.AddGreedRandomImage(greedImage.Url, greedImage.Nsfw, greedImage.ContentType, greedImage.Keyword); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "failed to add greed-random-image: " + err.Error(),
