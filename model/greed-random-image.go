@@ -1,7 +1,6 @@
 package model
 
 import (
-	"gorm.io/gorm"
 	"one-api/common"
 )
 
@@ -14,7 +13,7 @@ type GreedImage struct {
 }
 
 func GetGreedRandomImageUrlByNum(num int, nsfw uint8, keyword string) (greedImage *GreedImage, err error) {
-	var tx *gorm.DB
+	tx := DB
 	if nsfw > 0 {
 		tx = tx.Where("`nsfw` = ?", nsfw)
 	}
@@ -26,7 +25,7 @@ func GetGreedRandomImageUrlByNum(num int, nsfw uint8, keyword string) (greedImag
 }
 
 func GetGreedRandomImageTotal(nsfw uint8) (total int64, err error) {
-	var tx *gorm.DB
+	tx := DB
 	if nsfw > 0 {
 		tx = tx.Where("`nsfw` = ?", nsfw)
 	}
