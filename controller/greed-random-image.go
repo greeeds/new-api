@@ -21,9 +21,10 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	if c.Query("nsfw") != "" {
 		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
 	}
+	keyword := c.Query("keyword")
 	var total = int64(0)
 	if num == 0 {
-		total, _ = model.GetGreedRandomImageTotal(nsfw)
+		total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
 		if total == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -36,7 +37,7 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	showTotal, _ := strconv.ParseBool(c.Query("total"))
 	if showTotal {
 		if total == 0 {
-			total, _ = model.GetGreedRandomImageTotal(nsfw)
+			total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
@@ -45,7 +46,7 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 		})
 		return
 	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, c.Query("keyword"))
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, keyword)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -93,9 +94,10 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 	if c.Query("nsfw") != "" {
 		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
 	}
+	keyword := c.Query("keyword")
 	var total = int64(0)
 	if num == 0 {
-		total, _ = model.GetGreedRandomImageTotal(nsfw)
+		total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
 		if total == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -108,7 +110,7 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 	showTotal, _ := strconv.ParseBool(c.Query("total"))
 	if showTotal {
 		if total == 0 {
-			total, _ = model.GetGreedRandomImageTotal(nsfw)
+			total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
@@ -117,7 +119,7 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 		})
 		return
 	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, c.Query("keyword"))
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, keyword)
 	if greedImage == nil || err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

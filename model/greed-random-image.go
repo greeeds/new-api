@@ -24,10 +24,13 @@ func GetGreedRandomImageUrlByNum(num int, nsfw int, keyword string) (greedImage 
 	return greedImage, err
 }
 
-func GetGreedRandomImageTotal(nsfw int) (total int64, err error) {
+func GetGreedRandomImageTotal(nsfw int, keyword string) (total int64, err error) {
 	tx := DB
 	if nsfw >= 0 {
 		tx = tx.Where("`nsfw` = ?", nsfw)
+	}
+	if keyword != "" {
+		tx = tx.Where("`keyword` = ?", keyword)
 	}
 	err = tx.Model(&GreedImage{}).Count(&total).Error
 	if err != nil {
