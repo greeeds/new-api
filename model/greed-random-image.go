@@ -18,7 +18,7 @@ func GetGreedRandomImageUrlByNum(num int, nsfw int, keyword string) (greedImage 
 		tx = tx.Where("`nsfw` = ?", nsfw)
 	}
 	if keyword != "" {
-		tx = tx.Where("`key_word` = ?", keyword)
+		tx = tx.Where("`keyword` = ?", keyword)
 	}
 	err = tx.Order("id ASC").Limit(1).Offset(num).Find(&greedImage).Error
 	return greedImage, err
