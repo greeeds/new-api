@@ -17,8 +17,11 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 	if num < 0 {
 		num = 0
 	}
-	nsfw64, err := strconv.ParseUint(c.Query("nsfw"), 10, 8)
-	nsfw := uint8(nsfw64)
+	nsfw := -1
+	if c.Query("nsfw") != "" {
+		nsfw64, _ := strconv.ParseUint(c.Query("nsfw"), 10, 8)
+		nsfw = int(nsfw64)
+	}
 	var total = int64(0)
 	if num == 0 {
 		total, _ = model.GetGreedRandomImageTotal(nsfw)
@@ -80,8 +83,11 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 	if num < 0 {
 		num = 0
 	}
-	nsfw64, err := strconv.ParseUint(c.Query("nsfw"), 10, 8)
-	nsfw := uint8(nsfw64)
+	nsfw := -1
+	if c.Query("nsfw") != "" {
+		nsfw64, _ := strconv.ParseUint(c.Query("nsfw"), 10, 8)
+		nsfw = int(nsfw64)
+	}
 	var total = int64(0)
 	if num == 0 {
 		total, _ = model.GetGreedRandomImageTotal(nsfw)
