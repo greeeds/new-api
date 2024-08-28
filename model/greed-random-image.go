@@ -10,7 +10,7 @@ type GreedImage struct {
 	Url         string `json:"url" gorm:"size:500;unique;comment:url"`
 	Nsfw        uint8  `json:"nsfw" gorm:"type:tinyint;default:0;index;comment:Is Not Safe For Work? 0-涩图 1-R18 2-妹子图 3-jk 4-bs 5-hs 6-luolo"`
 	ContentType string `json:"content_type" gorm:"size:50;comment:content-type"`
-	Keyword     string `json:"keyword" gorm:"size:50;comment:关键词"`
+	Keyword     string `json:"keyword" gorm:"size:50;index;comment:关键词"`
 }
 
 func GetGreedRandomImageUrlByNum(num int, nsfw uint8, keyword string) (greedImage *GreedImage, err error) {
