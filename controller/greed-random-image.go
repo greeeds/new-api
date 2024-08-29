@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"io"
 	"math/rand/v2"
@@ -13,40 +14,7 @@ import (
 )
 
 func GetGreedRandomImageUrlByNum(c *gin.Context) {
-	num, _ := strconv.Atoi(c.Query("num"))
-	if num < 0 {
-		num = 0
-	}
-	nsfw := -1
-	if c.Query("nsfw") != "" {
-		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
-	}
-	keyword := c.Query("keyword")
-	var total = int64(-1)
-	if num == 0 {
-		total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
-		if total == 0 {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "No image found",
-			})
-			return
-		}
-		num = rand.IntN(int(total))
-	}
-	showTotal, _ := strconv.ParseBool(c.Query("total"))
-	if showTotal {
-		if total < 0 {
-			total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    total,
-		})
-		return
-	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, keyword)
+	greedImage, err := GetImage(c)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -86,49 +54,32 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 }
 
 func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
-	num, _ := strconv.Atoi(c.Query("num"))
-	if num < 0 {
-		num = 0
-	}
-	nsfw := -1
-	if c.Query("nsfw") != "" {
-		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
-	}
-	keyword := c.Query("keyword")
-	var total = int64(0)
-	if num == 0 {
-		total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
-		if total == 0 {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "No image found",
-			})
-			return
-		}
-		num = rand.IntN(int(total))
-	}
-	showTotal, _ := strconv.ParseBool(c.Query("total"))
-	if showTotal {
-		if total == 0 {
-			total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    total,
-		})
-		return
-	}
-	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, keyword)
-	if greedImage == nil || err != nil {
+	greedImage, err := GetImage(c)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "Failed to get image",
+			"message": err.Error(),
 		})
 		return
 	}
 	// 使用 http.Redirect 重定向到新的 URL
 	http.Redirect(c.Writer, c.Request, greedImage.Url, http.StatusMovedPermanently)
+}
+
+func GetGreedRandomImageUrlText(c *gin.Context) {
+	greedImage, err := GetImage(c)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": greedImage.Url,
+		})
+	}
 }
 
 func AddGreedRandomImage(c *gin.Context) {
@@ -172,4 +123,43 @@ func AddGreedRandomImage(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+func GetTotal(c *gin.Context) {
+	nsfw := -1
+	if c.Query("nsfw") != "" {
+		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
+	}
+	total, _ := model.GetGreedRandomImageTotal(nsfw, c.Query("keyword"))
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    total,
+	})
+	return
+}
+
+func GetImage(c *gin.Context) (*model.GreedImage, error) {
+	num, _ := strconv.Atoi(c.Query("num"))
+	if num < 0 {
+		num = 0
+	}
+	nsfw := -1
+	if c.Query("nsfw") != "" {
+		nsfw, _ = strconv.Atoi(c.Query("nsfw"))
+	}
+	keyword := c.Query("keyword")
+	var total = int64(-1)
+	if num == 0 {
+		total, _ = model.GetGreedRandomImageTotal(nsfw, keyword)
+		if total == 0 {
+			return nil, errors.New("No image found")
+		}
+		num = rand.IntN(int(total))
+	}
+	greedImage, err := model.GetGreedRandomImageUrlByNum(num, nsfw, keyword)
+	if greedImage == nil || err != nil {
+		return nil, errors.New("Failed to get image")
+	}
+	return greedImage, err
 }
