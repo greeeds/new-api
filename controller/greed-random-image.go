@@ -76,9 +76,10 @@ func GetGreedRandomImageUrlText(c *gin.Context) {
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    greedImage.Url,
+			"success":     true,
+			"message":     "",
+			"data":        greedImage.Url,
+			"contentType": greedImage.ContentType,
 		})
 	}
 }
