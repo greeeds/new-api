@@ -44,6 +44,11 @@ func SendRegisterEmail(username string) {
 	}
 }
 
+func generateMessageID() string {
+	domain := strings.Split(SMTPFrom, "@")[1]
+	return fmt.Sprintf("<%d.%s@%s>", time.Now().UnixNano(), GetRandomString(12), domain)
+}
+
 func SendEmail(subject string, receiver string, content string) error {
 	if SMTPFrom == "" { // for compatibility
 		SMTPFrom = SMTPAccount
@@ -53,8 +58,9 @@ func SendEmail(subject string, receiver string, content string) error {
 		"From: %s<%s>\r\n"+
 		"Subject: %s\r\n"+
 		"Date: %s\r\n"+
+		"Message-ID: %s\r\n"+ // 添加 Message-ID 头
 		"Content-Type: text/html; charset=UTF-8\r\n\r\n%s\r\n",
-		receiver, SystemName, SMTPFrom, encodedSubject, time.Now().Format(time.RFC1123Z), content))
+		receiver, SystemName, SMTPFrom, encodedSubject, time.Now().Format(time.RFC1123Z), generateMessageID(), content))
 	var auth smtp.Auth
 	if SMTPAuthLoginEnabled {
 		auth = LoginAuth(SMTPAccount, SMTPToken)
@@ -102,6 +108,9 @@ func SendEmail(subject string, receiver string, content string) error {
 		if err != nil {
 			return err
 		}
+	} else if isOutlookServer(SMTPAccount) {
+		auth = LoginAuth(SMTPAccount, SMTPToken)
+		err = smtp.SendMail(addr, auth, SMTPAccount, to, mail)
 	} else {
 		err = smtp.SendMail(addr, auth, SMTPAccount, to, mail)
 	}

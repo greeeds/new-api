@@ -33,6 +33,13 @@ export function getLogo() {
   return logo;
 }
 
+export function getUserIdFromLocalStorage() {
+  let user = localStorage.getItem('user');
+  if (!user) return -1;
+  user = JSON.parse(user);
+  return user.id;
+}
+
 export function getFooterHTML() {
   return localStorage.getItem('footer_html');
 }
@@ -136,6 +143,12 @@ export function removeTrailingSlash(url) {
   } else {
     return url;
   }
+}
+
+export function getTodayStartTimestamp() {
+  var now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.floor(now.getTime() / 1000);
 }
 
 export function timestamp2string(timestamp) {

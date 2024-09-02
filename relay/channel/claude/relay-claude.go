@@ -8,12 +8,10 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
-	"one-api/constant"
 	"one-api/dto"
 	relaycommon "one-api/relay/common"
 	"one-api/service"
 	"strings"
-	"time"
 )
 
 func stopReasonClaude2OpenAI(reason string) string {
@@ -65,15 +63,21 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 
 	for _, tool := range textRequest.Tools {
 		if params, ok := tool.Function.Parameters.(map[string]any); ok {
-			claudeTools = append(claudeTools, Tool{
+			claudeTool := Tool{
 				Name:        tool.Function.Name,
 				Description: tool.Function.Description,
-				InputSchema: InputSchema{
-					Type:       params["type"].(string),
-					Properties: params["properties"],
-					Required:   params["required"],
-				},
-			})
+			}
+			claudeTool.InputSchema = make(map[string]interface{})
+			claudeTool.InputSchema["type"] = params["type"].(string)
+			claudeTool.InputSchema["properties"] = params["properties"]
+			claudeTool.InputSchema["required"] = params["required"]
+			for s, a := range params {
+				if s == "type" || s == "properties" || s == "required" {
+					continue
+				}
+				claudeTool.InputSchema[s] = a
+			}
+			claudeTools = append(claudeTools, claudeTool)
 		}
 	}
 
@@ -135,6 +139,7 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 	}
 
 	claudeMessages := make([]ClaudeMessage, 0)
+	isFirstMessage := true
 	for _, message := range formatMessages {
 		if message.Role == "system" {
 			if message.IsStringContent() {
@@ -150,6 +155,22 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 				claudeRequest.System = content
 			}
 		} else {
+			if isFirstMessage {
+				isFirstMessage = false
+				if message.Role != "user" {
+					// fix: first message is assistant, add user message
+					claudeMessage := ClaudeMessage{
+						Role: "user",
+						Content: []ClaudeMediaMessage{
+							{
+								Type: "text",
+								Text: "...",
+							},
+						},
+					}
+					claudeMessages = append(claudeMessages, claudeMessage)
+				}
+			}
 			claudeMessage := ClaudeMessage{
 				Role: message.Role,
 			}
@@ -325,98 +346,66 @@ func ResponseClaude2OpenAI(reqMode int, claudeResponse *ClaudeResponse) *dto.Ope
 	return &fullTextResponse
 }
 
-func claudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
+func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
 	responseId := fmt.Sprintf("chatcmpl-%s", common.GetUUID())
 	var usage *dto.Usage
 	usage = &dto.Usage{}
 	responseText := ""
 	createdTime := common.GetTimestamp()
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
+	scanner.Split(bufio.ScanLines)
+	service.SetEventStreamHeaders(c)
+
+	for scanner.Scan() {
+		data := scanner.Text()
+		info.SetFirstResponseTime()
+		if len(data) < 6 || !strings.HasPrefix(data, "data:") {
+			continue
 		}
-		if i := strings.Index(string(data), "\n"); i >= 0 {
-			return i + 1, data[0:i], nil
+		data = strings.TrimPrefix(data, "data:")
+		data = strings.TrimSpace(data)
+		var claudeResponse ClaudeResponse
+		err := json.Unmarshal([]byte(data), &claudeResponse)
+		if err != nil {
+			common.SysError("error unmarshalling stream response: " + err.Error())
+			continue
 		}
-		if atEOF {
-			return len(data), data, nil
+
+		response, claudeUsage := StreamResponseClaude2OpenAI(requestMode, &claudeResponse)
+		if response == nil {
+			continue
 		}
-		return 0, nil, nil
-	})
-	dataChan := make(chan string, 5)
-	stopChan := make(chan bool, 2)
-	go func() {
-		for scanner.Scan() {
-			data := scanner.Text()
-			if !strings.HasPrefix(data, "data: ") {
+		if requestMode == RequestModeCompletion {
+			responseText += claudeResponse.Completion
+			responseId = response.Id
+		} else {
+			if claudeResponse.Type == "message_start" {
+				// message_start, 获取usage
+				responseId = claudeResponse.Message.Id
+				info.UpstreamModelName = claudeResponse.Message.Model
+				usage.PromptTokens = claudeUsage.InputTokens
+			} else if claudeResponse.Type == "content_block_delta" {
+				responseText += claudeResponse.Delta.Text
+			} else if claudeResponse.Type == "message_delta" {
+				usage.CompletionTokens = claudeUsage.OutputTokens
+				usage.TotalTokens = claudeUsage.InputTokens + claudeUsage.OutputTokens
+			} else if claudeResponse.Type == "content_block_start" {
+
+			} else {
 				continue
 			}
-			data = strings.TrimPrefix(data, "data: ")
-			if !common.SafeSendStringTimeout(dataChan, data, constant.StreamingTimeout) {
-				// send data timeout, stop the stream
-				common.LogError(c, "send data timeout, stop the stream")
-				break
-			}
 		}
-		stopChan <- true
-	}()
-	isFirst := true
-	service.SetEventStreamHeaders(c)
-	c.Stream(func(w io.Writer) bool {
-		select {
-		case data := <-dataChan:
-			if isFirst {
-				isFirst = false
-				info.FirstResponseTime = time.Now()
-			}
-			// some implementations may add \r at the end of data
-			data = strings.TrimSuffix(data, "\r")
-			var claudeResponse ClaudeResponse
-			err := json.Unmarshal([]byte(data), &claudeResponse)
-			if err != nil {
-				common.SysError("error unmarshalling stream response: " + err.Error())
-				return true
-			}
+		//response.Id = responseId
+		response.Id = responseId
+		response.Created = createdTime
+		response.Model = info.UpstreamModelName
 
-			response, claudeUsage := StreamResponseClaude2OpenAI(requestMode, &claudeResponse)
-			if response == nil {
-				return true
-			}
-			if requestMode == RequestModeCompletion {
-				responseText += claudeResponse.Completion
-				responseId = response.Id
-			} else {
-				if claudeResponse.Type == "message_start" {
-					// message_start, 获取usage
-					responseId = claudeResponse.Message.Id
-					info.UpstreamModelName = claudeResponse.Message.Model
-					usage.PromptTokens = claudeUsage.InputTokens
-				} else if claudeResponse.Type == "content_block_delta" {
-					responseText += claudeResponse.Delta.Text
-				} else if claudeResponse.Type == "message_delta" {
-					usage.CompletionTokens = claudeUsage.OutputTokens
-					usage.TotalTokens = claudeUsage.InputTokens + claudeUsage.OutputTokens
-				} else if claudeResponse.Type == "content_block_start" {
-
-				} else {
-					return true
-				}
-			}
-			//response.Id = responseId
-			response.Id = responseId
-			response.Created = createdTime
-			response.Model = info.UpstreamModelName
-
-			err = service.ObjectData(c, response)
-			if err != nil {
-				common.SysError(err.Error())
-			}
-			return true
-		case <-stopChan:
-			return false
+		err = service.ObjectData(c, response)
+		if err != nil {
+			common.LogError(c, "send_stream_response_failed: "+err.Error())
 		}
-	})
+	}
+
 	if requestMode == RequestModeCompletion {
 		usage, _ = service.ResponseText2Usage(responseText, info.UpstreamModelName, info.PromptTokens)
 	} else {
@@ -435,14 +424,11 @@ func claudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 		}
 	}
 	service.Done(c)
-	err := resp.Body.Close()
-	if err != nil {
-		return service.OpenAIErrorWrapperLocal(err, "close_response_body_failed", http.StatusInternalServerError), nil
-	}
+	resp.Body.Close()
 	return nil, usage
 }
 
-func claudeHandler(requestMode int, c *gin.Context, resp *http.Response, promptTokens int, model string) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
+func ClaudeHandler(c *gin.Context, resp *http.Response, requestMode int, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
@@ -468,15 +454,15 @@ func claudeHandler(requestMode int, c *gin.Context, resp *http.Response, promptT
 		}, nil
 	}
 	fullTextResponse := ResponseClaude2OpenAI(requestMode, &claudeResponse)
-	completionTokens, err := service.CountTokenText(claudeResponse.Completion, model)
+	completionTokens, err := service.CountTokenText(claudeResponse.Completion, info.OriginModelName)
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "count_token_text_failed", http.StatusInternalServerError), nil
 	}
 	usage := dto.Usage{}
 	if requestMode == RequestModeCompletion {
-		usage.PromptTokens = promptTokens
+		usage.PromptTokens = info.PromptTokens
 		usage.CompletionTokens = completionTokens
-		usage.TotalTokens = promptTokens + completionTokens
+		usage.TotalTokens = info.PromptTokens + completionTokens
 	} else {
 		usage.PromptTokens = claudeResponse.Usage.InputTokens
 		usage.CompletionTokens = claudeResponse.Usage.OutputTokens

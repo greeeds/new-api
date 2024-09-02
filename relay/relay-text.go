@@ -52,7 +52,7 @@ func getAndValidateTextRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo)
 		}
 	case relayconstant.RelayModeEmbeddings:
 	case relayconstant.RelayModeModerations:
-		if textRequest.Input == "" {
+		if textRequest.Input == "" || textRequest.Input == nil {
 			return nil, errors.New("field input is required")
 		}
 	case relayconstant.RelayModeEdits:
@@ -131,6 +131,12 @@ func TextHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 		return openaiErr
 	}
 
+	includeUsage := false
+	// 判断用户是否需要返回使用情况
+	if textRequest.StreamOptions != nil && textRequest.StreamOptions.IncludeUsage {
+		includeUsage = true
+	}
+
 	// 如果不支持StreamOptions，将StreamOptions设置为nil
 	if !relayInfo.SupportStreamOptions || !textRequest.Stream {
 		textRequest.StreamOptions = nil
@@ -143,8 +149,8 @@ func TextHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 		}
 	}
 
-	if textRequest.StreamOptions != nil && textRequest.StreamOptions.IncludeUsage {
-		relayInfo.ShouldIncludeUsage = textRequest.StreamOptions.IncludeUsage
+	if includeUsage {
+		relayInfo.ShouldIncludeUsage = true
 	}
 
 	adaptor := GetAdaptor(relayInfo.ApiType)
@@ -239,8 +245,11 @@ func preConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommo
 	if err != nil {
 		return 0, 0, service.OpenAIErrorWrapperLocal(err, "get_user_quota_failed", http.StatusInternalServerError)
 	}
-	if userQuota <= 0 || userQuota-preConsumedQuota < 0 {
+	if userQuota <= 0 {
 		return 0, 0, service.OpenAIErrorWrapperLocal(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
+	}
+	if userQuota-preConsumedQuota < 0 {
+		return 0, 0, service.OpenAIErrorWrapperLocal(errors.New(fmt.Sprintf("chat pre-consumed quota failed, user quota: %d, need quota: %d", userQuota, preConsumedQuota)), "insufficient_user_quota", http.StatusBadRequest)
 	}
 	err = model.CacheDecreaseUserQuota(relayInfo.UserId, preConsumedQuota)
 	if err != nil {
@@ -254,13 +263,13 @@ func preConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommo
 			if tokenQuota > 100*preConsumedQuota {
 				// 令牌额度充足，信任令牌
 				preConsumedQuota = 0
-				common.LogInfo(c.Request.Context(), fmt.Sprintf("user %d quota %d and token %d quota %d are enough, trusted and no need to pre-consume", relayInfo.UserId, userQuota, relayInfo.TokenId, tokenQuota))
+				common.LogInfo(c, fmt.Sprintf("user %d quota %d and token %d quota %d are enough, trusted and no need to pre-consume", relayInfo.UserId, userQuota, relayInfo.TokenId, tokenQuota))
 			}
 		} else {
 			// in this case, we do not pre-consume quota
 			// because the user has enough quota
 			preConsumedQuota = 0
-			common.LogInfo(c.Request.Context(), fmt.Sprintf("user %d with unlimited token has enough quota %d, trusted and no need to pre-consume", relayInfo.UserId, userQuota))
+			common.LogInfo(c, fmt.Sprintf("user %d with unlimited token has enough quota %d, trusted and no need to pre-consume", relayInfo.UserId, userQuota))
 		}
 	}
 	if preConsumedQuota > 0 {
@@ -287,7 +296,14 @@ func returnPreConsumedQuota(c *gin.Context, tokenId int, userQuota int, preConsu
 func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelName string,
 	usage *dto.Usage, ratio float64, preConsumedQuota int, userQuota int, modelRatio float64, groupRatio float64,
 	modelPrice float64, usePrice bool, extraContent string, sourceModel string, bodyContent string) {
-
+	if usage == nil {
+		usage = &dto.Usage{
+			PromptTokens:     relayInfo.PromptTokens,
+			CompletionTokens: 0,
+			TotalTokens:      relayInfo.PromptTokens,
+		}
+		extraContent += "  ，（可能是请求出错）"
+	}
 	useTimeSeconds := time.Now().Unix() - relayInfo.StartTime.Unix()
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
@@ -308,7 +324,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelN
 	totalTokens := promptTokens + completionTokens
 	var logContent string
 	if !usePrice {
-		logContent = fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
+		logContent = fmt.Sprintf("模型倍率 %.2f，补全倍率 %.2f，分组倍率 %.2f", modelRatio, completionRatio, groupRatio)
 	} else {
 		logContent = fmt.Sprintf("模型价格 %.2f，分组倍率 %.2f", modelPrice, groupRatio)
 	}
@@ -343,6 +359,10 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelN
 	logModel := modelName
 	if strings.HasPrefix(logModel, "gpt-4-gizmo") {
 		logModel = "gpt-4-gizmo-*"
+		logContent += fmt.Sprintf("，模型 %s", modelName)
+	}
+	if strings.HasPrefix(logModel, "gpt-4o-gizmo") {
+		logModel = "gpt-4o-gizmo-*"
 		logContent += fmt.Sprintf("，模型 %s", modelName)
 	}
 	if extraContent != "" {

@@ -184,19 +184,13 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	if channel == nil {
 		return
 	}
-	c.Set("channel", channel.Type)
 	c.Set("channel_id", channel.Id)
 	c.Set("channel_name", channel.Name)
 	c.Set("channel_type", channel.Type)
-	ban := true
-	// parse *int to bool
-	if channel.AutoBan != nil && *channel.AutoBan == 0 {
-		ban = false
-	}
 	if nil != channel.OpenAIOrganization && "" != *channel.OpenAIOrganization {
 		c.Set("channel_organization", *channel.OpenAIOrganization)
 	}
-	c.Set("auto_ban", ban)
+	c.Set("auto_ban", channel.GetAutoBan())
 	c.Set("model_mapping", channel.GetModelMapping())
 	c.Set("status_code_mapping", channel.GetStatusCodeMapping())
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
@@ -205,6 +199,8 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	switch channel.Type {
 	case common.ChannelTypeAzure:
 		c.Set("api_version", channel.Other)
+	case common.ChannelTypeVertexAi:
+		c.Set("region", channel.Other)
 	case common.ChannelTypeXunfei:
 		c.Set("api_version", channel.Other)
 	case common.ChannelTypeGemini:

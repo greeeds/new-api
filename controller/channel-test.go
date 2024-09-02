@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bytedance/gopkg/util/gopool"
 	"io"
 	"math"
 	"net/http"
@@ -219,7 +220,7 @@ func testAllChannels(notify bool) error {
 	if disableThreshold == 0 {
 		disableThreshold = 10000000 // a impossible value
 	}
-	go func() {
+	gopool.Go(func() {
 		for _, channel := range channels {
 			isChannelEnabled := channel.Status == common.ChannelStatusEnabled
 			tik := time.Now()
@@ -241,7 +242,7 @@ func testAllChannels(notify bool) error {
 			}
 
 			// parse *int to bool
-			if channel.AutoBan != nil && *channel.AutoBan == 0 {
+			if !channel.GetAutoBan() {
 				ban = false
 			}
 
@@ -267,7 +268,7 @@ func testAllChannels(notify bool) error {
 				common.SysError(fmt.Sprintf("failed to send email: %s", err.Error()))
 			}
 		}
-	}()
+	})
 	return nil
 }
 

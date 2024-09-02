@@ -214,6 +214,8 @@ const (
 	ChannelTypeDify           = 37
 	ChannelTypeJina           = 38
 	ChannelCloudflare         = 39
+	ChannelTypeSiliconFlow    = 40
+	ChannelTypeVertexAi       = 41
 
 	ChannelTypeDummy // this one is only for count, do not add any channel after this
 
@@ -260,4 +262,6 @@ var ChannelBaseURLs = []string{
 	"",                                          //37
 	"https://api.jina.ai",                       //38
 	"https://api.cloudflare.com",                //39
+	"https://api.siliconflow.cn",                //40
+	"",                                          //41
 }
