@@ -183,7 +183,13 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	logContent := fmt.Sprintf("大小 %s, 品质 %s", imageRequest.Size, quality)
-	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, imageRatio, true, logContent, imageRequest.SourceModel, "")
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(imageRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
+	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, imageRatio, true, logContent, imageRequest.SourceModel, bodyContent)
 
 	return nil
 }
