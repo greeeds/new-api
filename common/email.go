@@ -14,10 +14,6 @@ type loginAuth struct {
 	username, password string
 }
 
-func LoginAuth(username, password string) smtp.Auth {
-	return &loginAuth{username, password}
-}
-
 func (a *loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 	return "LOGIN", []byte(a.username), nil
 }
