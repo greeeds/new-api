@@ -9,7 +9,7 @@ on:
       - '!*-alpha*'
 jobs:
   release:
-    runs-on: self-hosted
+    runs-on: windows-latest
     defaults:
       run:
         shell: bash
