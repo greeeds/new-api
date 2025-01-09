@@ -15,6 +15,7 @@ type FormatJsonSchema struct {
 }
 
 type GeneralOpenAIRequest struct {
+	SourceModel         string          `json:"source_model,omitempty"`
 	Model               string          `json:"model,omitempty"`
 	Messages            []Message       `json:"messages,omitempty"`
 	Prompt              any             `json:"prompt,omitempty"`

@@ -142,7 +142,7 @@ const LogsTable = () => {
         </Tag>
       );
     }
-  } 
+  }
 
   const columns = [
     {
@@ -410,16 +410,16 @@ const LogsTable = () => {
         );
       },
     },
-    {
-      title: '参数',
-      dataIndex: 'body',
-      className: isRoot() ? 'tableShow' : 'tableHiddle',
-      render: (text, record, index) => {
-        return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 120 } } } }} style={{ maxWidth: 120}}>
-          {text}
-        </Paragraph>;
-      }
-    }
+//    {
+//      title: '参数',
+//      dataIndex: 'body',
+//      className: isRoot() ? 'tableShow' : 'tableHiddle',
+//      render: (text, record, index) => {
+//        return <Paragraph ellipsis={{ rows: 2, showTooltip: { type: 'popover', opts: { style: { width: 120 } } } }} style={{ maxWidth: 120}}>
+//          {text}
+//        </Paragraph>;
+//      }
+//    }
   ];
 
   const [styleState, styleDispatch] = useContext(StyleContext);
@@ -607,7 +607,12 @@ const LogsTable = () => {
           value: content,
         });
       }
-
+      if (logs[i].body && isRoot()) {
+        expandDataLocal.push({
+          key: t('请求参数'),
+          value: logs[i].body
+        });
+      }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
 
