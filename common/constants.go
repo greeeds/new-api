@@ -30,6 +30,7 @@ var DefaultCollapseSidebar = false // default value of collapse sidebar
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 
 var SessionSecret = uuid.New().String()
+var CryptoSecret = uuid.New().String()
 
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex
@@ -41,6 +42,7 @@ var PasswordLoginEnabled = true
 var PasswordRegisterEnabled = true
 var EmailVerificationEnabled = false
 var GitHubOAuthEnabled = false
+var LinuxDOOAuthEnabled = false
 var WeChatAuthEnabled = false
 var TelegramOAuthEnabled = false
 var TurnstileCheckEnabled = false
@@ -75,6 +77,9 @@ var SMTPAuthLoginEnabled = false
 
 var GitHubClientId = ""
 var GitHubClientSecret = ""
+
+var LinuxDOClientId = ""
+var LinuxDOClientSecret = ""
 
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
@@ -113,6 +118,9 @@ var RelayTimeout = GetEnvOrDefault("RELAY_TIMEOUT", 0) // unit is second
 
 var GeminiSafetySetting = GetEnvOrDefaultString("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
 
+// https://docs.cohere.com/docs/safety-modes Type; NONE/CONTEXTUAL/STRICT
+var CohereSafetySetting = GetEnvOrDefaultString("COHERE_SAFETY_SETTING", "NONE")
+
 const (
 	RequestIdKey = "X-Oneapi-Request-Id"
 )
@@ -124,6 +132,10 @@ const (
 	RoleRootUser   = 100
 )
 
+func IsValidateRole(role int) bool {
+	return role == RoleGuestUser || role == RoleCommonUser || role == RoleAdminUser || role == RoleRootUser
+}
+
 var (
 	FileUploadPermission    = RoleGuestUser
 	FileDownloadPermission  = RoleGuestUser
@@ -134,11 +146,13 @@ var (
 // All duration's unit is seconds
 // Shouldn't larger then RateLimitKeyExpirationDuration
 var (
-	GlobalApiRateLimitNum            = GetEnvOrDefault("GLOBAL_API_RATE_LIMIT", 180)
-	GlobalApiRateLimitDuration int64 = 3 * 60
+	GlobalApiRateLimitEnable   = GetEnvOrDefaultBool("GLOBAL_API_RATE_LIMIT_ENABLE", true)
+	GlobalApiRateLimitNum      = GetEnvOrDefault("GLOBAL_API_RATE_LIMIT", 180)
+	GlobalApiRateLimitDuration = int64(GetEnvOrDefault("GLOBAL_API_RATE_LIMIT_DURATION", 180))
 
-	GlobalWebRateLimitNum            = GetEnvOrDefault("GLOBAL_WEB_RATE_LIMIT", 60)
-	GlobalWebRateLimitDuration int64 = 3 * 60
+	GlobalWebRateLimitEnable   = GetEnvOrDefaultBool("GLOBAL_WEB_RATE_LIMIT_ENABLE", true)
+	GlobalWebRateLimitNum      = GetEnvOrDefault("GLOBAL_WEB_RATE_LIMIT", 60)
+	GlobalWebRateLimitDuration = int64(GetEnvOrDefault("GLOBAL_WEB_RATE_LIMIT_DURATION", 180))
 
 	UploadRateLimitNum            = 10
 	UploadRateLimitDuration int64 = 60
@@ -216,6 +230,8 @@ const (
 	ChannelCloudflare         = 39
 	ChannelTypeSiliconFlow    = 40
 	ChannelTypeVertexAi       = 41
+	ChannelTypeMistral        = 42
+	ChannelTypeDeepSeek       = 43
 
 	ChannelTypeDummy // this one is only for count, do not add any channel after this
 
@@ -241,7 +257,7 @@ var ChannelBaseURLs = []string{
 	"https://open.bigmodel.cn",            // 16
 	"https://dashscope.aliyuncs.com",      // 17
 	"",                                    // 18
-	"https://ai.360.cn",                   // 19
+	"https://api.360.cn",                  // 19
 	"https://openrouter.ai/api",           // 20
 	"https://api.aiproxy.io",              // 21
 	"https://fastgpt.run/api/openapi",     // 22
@@ -264,4 +280,6 @@ var ChannelBaseURLs = []string{
 	"https://api.cloudflare.com",                //39
 	"https://api.siliconflow.cn",                //40
 	"",                                          //41
+	"https://api.mistral.ai",                    //42
+	"https://api.deepseek.com",                  //43
 }

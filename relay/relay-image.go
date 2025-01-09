@@ -9,11 +9,11 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
-	"one-api/constant"
 	"one-api/dto"
 	"one-api/model"
 	relaycommon "one-api/relay/common"
 	"one-api/service"
+	"one-api/setting"
 	"strings"
 )
 
@@ -59,7 +59,7 @@ func getAndValidImageRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.
 	//if imageRequest.N != 0 && (imageRequest.N < 1 || imageRequest.N > 10) {
 	//	return service.OpenAIErrorWrapper(errors.New("n must be between 1 and 10"), "invalid_field_value", http.StatusBadRequest)
 	//}
-	if constant.ShouldCheckPromptSensitive() {
+	if setting.ShouldCheckPromptSensitive() {
 		err := service.CheckSensitiveInput(imageRequest.Prompt)
 		if err != nil {
 			return nil, err
@@ -100,8 +100,8 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 		modelPrice = 0.0025 * modelRatio
 	}
 
-	groupRatio := common.GetGroupRatio(relayInfo.Group)
-	userQuota, err := model.CacheGetUserQuota(relayInfo.UserId)
+	groupRatio := setting.GetGroupRatio(relayInfo.Group)
+	userQuota, err := model.GetUserQuota(relayInfo.UserId, false)
 
 	sizeRatio := 1.0
 	// Size
@@ -150,22 +150,24 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 	requestBody = bytes.NewBuffer(jsonData)
 
 	statusCodeMappingStr := c.GetString("status_code_mapping")
+
 	resp, err := adaptor.DoRequest(c, relayInfo, requestBody)
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-
+	var httpResp *http.Response
 	if resp != nil {
-		relayInfo.IsStream = relayInfo.IsStream || strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream")
-		if resp.StatusCode != http.StatusOK {
-			openaiErr := service.RelayErrorHandler(resp)
+		httpResp = resp.(*http.Response)
+		relayInfo.IsStream = relayInfo.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
+		if httpResp.StatusCode != http.StatusOK {
+			openaiErr := service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 			return openaiErr
 		}
 	}
 
-	_, openaiErr := adaptor.DoResponse(c, resp, relayInfo)
+	_, openaiErr := adaptor.DoResponse(c, httpResp, relayInfo)
 	if openaiErr != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)

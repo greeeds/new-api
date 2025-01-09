@@ -1,4 +1,6 @@
-import { Tag } from '@douyinfe/semi-ui';
+import i18next from 'i18next';
+import { Modal, Tag, Typography } from '@douyinfe/semi-ui';
+import { copy, showSuccess } from './utils.js';
 
 export function renderText(text, limit) {
   if (text.length > limit) {
@@ -15,8 +17,8 @@ export function renderText(text, limit) {
 export function renderGroup(group) {
   if (group === '') {
     return (
-      <Tag size='large' key='default'>
-        unknown
+      <Tag size='large' key='default' color='orange'>
+        {i18next.t('用户分组')}
       </Tag>
     );
   }
@@ -37,6 +39,14 @@ export function renderGroup(group) {
           size='large'
           color={tagColors[group] || stringToColor(group)}
           key={group}
+          onClick={async (event) => {
+            event.stopPropagation();
+            if (await copy(group)) {
+              showSuccess(i18next.t('已复制：') + group);
+            } else {
+              Modal.error({ title: t('无法复制到剪贴板，请手动复制'), content: group });
+            }
+          }}
         >
           {group}
         </Tag>
@@ -44,6 +54,81 @@ export function renderGroup(group) {
     </span>
   );
 }
+
+export function renderRatio(ratio) {
+  let color = 'green';
+  if (ratio > 5) {
+    color = 'red';
+  } else if (ratio > 3) {
+    color = 'orange';
+  } else if (ratio > 1) {
+    color = 'blue';
+  }
+  return <Tag color={color}>{ratio}x {i18next.t('倍率')}</Tag>;
+}
+
+export const renderGroupOption = (item) => {
+  const {
+    disabled,
+    selected,
+    label,
+    value,
+    focused,
+    className,
+    style,
+    onMouseEnter,
+    onClick,
+    empty,
+    emptyContent,
+    ...rest
+  } = item;
+  
+  const baseStyle = {
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: '8px 16px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    backgroundColor: focused ? 'var(--semi-color-fill-0)' : 'transparent',
+    opacity: disabled ? 0.5 : 1,
+    ...(selected && {
+      backgroundColor: 'var(--semi-color-primary-light-default)',
+    }),
+    '&:hover': {
+      backgroundColor: !disabled && 'var(--semi-color-fill-1)'
+    }
+  };
+
+  const handleClick = () => {
+    if (!disabled && onClick) {
+      onClick();
+    }
+  };
+
+  const handleMouseEnter = (e) => {
+    if (!disabled && onMouseEnter) {
+      onMouseEnter(e);
+    }
+  };
+  
+  return (
+    <div 
+      style={baseStyle}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <Typography.Text strong type={disabled ? 'tertiary' : undefined}>
+          {value}
+        </Typography.Text>
+        <Typography.Text type="secondary" size="small">
+          {label}
+        </Typography.Text>
+      </div>
+      {item.ratio && renderRatio(item.ratio)}
+    </div>
+  );
+};
 
 export function renderNumber(num) {
   if (num >= 1000000000) {
@@ -58,6 +143,9 @@ export function renderNumber(num) {
 }
 
 export function renderQuotaNumberWithDigit(num, digits = 2) {
+  if (typeof num !== 'number' || isNaN(num)) {
+    return 0;
+  }
   let displayInCurrency = localStorage.getItem('display_in_currency');
   num = num.toFixed(digits);
   if (displayInCurrency) {
@@ -67,6 +155,8 @@ export function renderQuotaNumberWithDigit(num, digits = 2) {
 }
 
 export function renderNumberWithPoint(num) {
+  if (num === undefined)
+    return '';
   num = num.toFixed(2);
   if (num >= 100000) {
     // Convert number to string to manipulate it
@@ -142,14 +232,16 @@ export function renderModelPrice(
   completionRatio,
   groupRatio,
 ) {
-  // 1 ratio = $0.002 / 1K tokens
   if (modelPrice !== -1) {
-    return '模型价格：$' + modelPrice + ' * 分组倍率：' + groupRatio + ' = $' + modelPrice * groupRatio;
+    return i18next.t('模型价格：${{price}} * 分组倍率：{{ratio}} = ${{total}}', {
+      price: modelPrice,
+      ratio: groupRatio,
+      total: modelPrice * groupRatio
+    });
   } else {
     if (completionRatio === undefined) {
       completionRatio = 0;
     }
-    // 这里的 *2 是因为 1倍率=0.002刀，请勿删除
     let inputRatioPrice = modelRatio * 2.0;
     let completionRatioPrice = modelRatio * 2.0 * completionRatio;
     let price =
@@ -158,15 +250,132 @@ export function renderModelPrice(
     return (
       <>
         <article>
-          <p>提示：${inputRatioPrice} * {groupRatio} = ${inputRatioPrice * groupRatio} / 1M tokens</p>
-          <p>补全：${completionRatioPrice} * {groupRatio} = ${completionRatioPrice * groupRatio} / 1M tokens</p>
+          <p>{i18next.t('提示：${{price}} * {{ratio}} = ${{total}} / 1M tokens', {
+            price: inputRatioPrice,
+            ratio: groupRatio,
+            total: inputRatioPrice * groupRatio
+          })}</p>
+          <p>{i18next.t('补全：${{price}} * {{ratio}} = ${{total}} / 1M tokens', {
+            price: completionRatioPrice,
+            ratio: groupRatio,
+            total: completionRatioPrice * groupRatio
+          })}</p>
           <p></p>
           <p>
-            提示 {inputTokens} tokens / 1M tokens * ${inputRatioPrice} + 补全{' '}
-            {completionTokens} tokens / 1M tokens * ${completionRatioPrice} * 分组 {groupRatio} =
-            ${price.toFixed(6)}
+            {i18next.t('提示 {{input}} tokens / 1M tokens * ${{price}} + 补全 {{completion}} tokens / 1M tokens * ${{compPrice}} * 分组 {{ratio}} = ${{total}}', {
+              input: inputTokens,
+              price: inputRatioPrice,
+              completion: completionTokens,
+              compPrice: completionRatioPrice,
+              ratio: groupRatio,
+              total: price.toFixed(6)
+            })}
           </p>
-          <p>仅供参考，以实际扣费为准</p>
+          <p>{i18next.t('仅供参考，以实际扣费为准')}</p>
+        </article>
+      </>
+    );
+  }
+}
+
+export function renderModelPriceSimple(
+  modelRatio,
+  modelPrice = -1,
+  groupRatio,
+) {
+  if (modelPrice !== -1) {
+    return i18next.t('价格：${{price}} * 分组：{{ratio}}', {
+      price: modelPrice,
+      ratio: groupRatio
+    });
+  } else {
+    return i18next.t('模型: {{ratio}} * 分组: {{groupRatio}}', {
+      ratio: modelRatio,
+      groupRatio: groupRatio
+    });
+  }
+}
+
+export function renderAudioModelPrice(
+  inputTokens,
+  completionTokens,
+  modelRatio,
+  modelPrice = -1,
+  completionRatio,
+  audioInputTokens,
+  audioCompletionTokens,
+  audioRatio,
+  audioCompletionRatio,
+  groupRatio,
+) {
+  // 1 ratio = $0.002 / 1K tokens
+  if (modelPrice !== -1) {
+    return '模型价格：$' + modelPrice + ' * 分组倍率：' + groupRatio + ' = $' + modelPrice * groupRatio;
+  } else {
+    if (completionRatio === undefined) {
+      completionRatio = 0;
+    }
+
+    // try toFixed audioRatio
+    audioRatio = parseFloat(audioRatio).toFixed(6);
+    // 这里的 *2 是因为 1倍率=0.002刀，请勿删除
+    let inputRatioPrice = modelRatio * 2.0;
+    let completionRatioPrice = modelRatio * 2.0 * completionRatio;
+    let price =
+      (inputTokens / 1000000) * inputRatioPrice * groupRatio +
+      (completionTokens / 1000000) * completionRatioPrice * groupRatio +
+      (audioInputTokens / 1000000) * inputRatioPrice * audioRatio * groupRatio +
+      (audioCompletionTokens / 1000000) * inputRatioPrice * audioRatio * audioCompletionRatio * groupRatio;
+    return (
+      <>
+        <article>
+          <p>{i18next.t('提示：${{price}} * {{ratio}} = ${{total}} / 1M tokens', {
+            price: inputRatioPrice,
+            ratio: groupRatio,
+            total: inputRatioPrice * groupRatio
+          })}</p>
+          <p>{i18next.t('补全：${{price}} * {{ratio}} = ${{total}} / 1M tokens', {
+            price: completionRatioPrice,
+            ratio: groupRatio,
+            total: completionRatioPrice * groupRatio
+          })}</p>
+          <p>{i18next.t('音频提示：${{price}} * {{ratio}} * {{audioRatio}} = ${{total}} / 1M tokens', {
+            price: inputRatioPrice,
+            ratio: groupRatio,
+            audioRatio,
+            total: inputRatioPrice * audioRatio * groupRatio
+          })}</p>
+          <p>{i18next.t('音频补全：${{price}} * {{ratio}} * {{audioRatio}} * {{audioCompRatio}} = ${{total}} / 1M tokens', {
+            price: inputRatioPrice,
+            ratio: groupRatio,
+            audioRatio,
+            audioCompRatio: audioCompletionRatio,
+            total: inputRatioPrice * audioRatio * audioCompletionRatio * groupRatio
+          })}</p>
+          <p>
+            {i18next.t('文字提示 {{input}} tokens / 1M tokens * ${{price}} + 文字补全 {{completion}} tokens / 1M tokens * ${{compPrice}} +', {
+              input: inputTokens,
+              price: inputRatioPrice,
+              completion: completionTokens,
+              compPrice: completionRatioPrice
+            })}
+          </p>
+          <p>
+            {i18next.t('音频提示 {{input}} tokens / 1M tokens * ${{price}} * {{audioRatio}} + 音频补全 {{completion}} tokens / 1M tokens * ${{price}} * {{audioRatio}} * {{audioCompRatio}}', {
+              input: audioInputTokens,
+              completion: audioCompletionTokens,
+              price: inputRatioPrice,
+              audioRatio,
+              audioCompRatio: audioCompletionRatio
+            })}
+          </p>
+          <p>
+            {i18next.t('（文字 + 音频）* 分组倍率 {{ratio}} = ${{total}}', {
+              ratio: groupRatio,
+              total: price.toFixed(6)
+            })}
+          </p>
+          <p>{i18next.t('仅供参考，以实际扣费为准')}</p>
         </article>
       </>
     );
@@ -177,7 +386,7 @@ export function renderQuotaWithPrompt(quota, digits) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return `（等价金额：${renderQuota(quota, digits)}）`;
+    return '|' + i18next.t('等价金额') + ': ' + renderQuota(quota, digits) + '';
   }
   return '';
 }
@@ -197,7 +406,45 @@ const colors = [
   'red',
   'teal',
   'violet',
-  'yellow',
+  'yellow'
+];
+
+// 基础10色色板 (N ≤ 10)
+const baseColors = [
+  '#1664FF', // 主色
+  '#1AC6FF',
+  '#FF8A00',
+  '#3CC780',
+  '#7442D4',
+  '#FFC400',
+  '#304D77',
+  '#B48DEB',
+  '#009488',
+  '#FF7DDA'
+];
+
+// 扩展20色色板 (10 < N ≤ 20)
+const extendedColors = [
+  '#1664FF',
+  '#B2CFFF',
+  '#1AC6FF',
+  '#94EFFF',
+  '#FF8A00',
+  '#FFCE7A',
+  '#3CC780',
+  '#B9EDCD',
+  '#7442D4',
+  '#DDC5FA',
+  '#FFC400',
+  '#FAE878',
+  '#304D77',
+  '#8B959E',
+  '#B48DEB',
+  '#EFE3FF',
+  '#009488',
+  '#59BAA8',
+  '#FF7DDA',
+  '#FFCFEE'
 ];
 
 export const modelColorMap = {
@@ -209,7 +456,7 @@ export const modelColorMap = {
   'gpt-3.5-turbo-0613': 'rgb(60,179,113)', // 海洋绿
   'gpt-3.5-turbo-1106': 'rgb(32,178,170)', // 浅海洋绿
   'gpt-3.5-turbo-16k': 'rgb(149,252,206)', // 淡橙色
-  'gpt-3.5-turbo-16k-0613': 'rgb(119,255,214)', // 淡桃色
+  'gpt-3.5-turbo-16k-0613': 'rgb(119,255,214)', // 淡桃
   'gpt-3.5-turbo-instruct': 'rgb(175,238,238)', // 粉蓝色
   'gpt-4': 'rgb(135,206,235)', // 天蓝色
   // 'gpt-4-0314': 'rgb(70,130,180)', // 钢蓝色
@@ -244,14 +491,33 @@ export const modelColorMap = {
   'claude-2.1': 'rgb(255,209,190)', // 浅橙色（略有区别）
 };
 
+export function modelToColor(modelName) {
+  // 1. 如果模型在预定义的 modelColorMap 中，使用预定义颜色
+  if (modelColorMap[modelName]) {
+    return modelColorMap[modelName];
+  }
+
+  // 2. 生成一个稳定的数字作为索引
+  let hash = 0;
+  for (let i = 0; i < modelName.length; i++) {
+    hash = ((hash << 5) - hash) + modelName.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  hash = Math.abs(hash);
+
+  // 3. 根据模型名称长度选择不同的色板
+  const colorPalette = modelName.length > 10 ? extendedColors : baseColors;
+  
+  // 4. 使用hash值选择颜色
+  const index = hash % colorPalette.length;
+  return colorPalette[index];
+}
+
 export function stringToColor(str) {
   let sum = 0;
-  // 对字符串中的每个字符进行操作
   for (let i = 0; i < str.length; i++) {
-    // 将字符的ASCII值加到sum中
     sum += str.charCodeAt(i);
   }
-  // 使用模运算得到个位数
   let i = sum % colors.length;
   return colors[i];
 }

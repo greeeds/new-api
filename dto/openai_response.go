@@ -34,6 +34,7 @@ type OpenAITextResponseChoice struct {
 
 type OpenAITextResponse struct {
 	Id      string                     `json:"id"`
+	Model   string                     `json:"model"`
 	Object  string                     `json:"object"`
 	Created int64                      `json:"created"`
 	Choices []OpenAITextResponseChoice `json:"choices"`
@@ -85,6 +86,10 @@ type ToolCall struct {
 	Function FunctionCall `json:"function"`
 }
 
+func (c *ToolCall) SetIndex(i int) {
+	c.Index = &i
+}
+
 type FunctionCall struct {
 	Description string `json:"description,omitempty"`
 	Name        string `json:"name,omitempty"`
@@ -127,7 +132,9 @@ type CompletionsStreamResponse struct {
 }
 
 type Usage struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-	TotalTokens      int `json:"total_tokens"`
+	PromptTokens           int                `json:"prompt_tokens"`
+	CompletionTokens       int                `json:"completion_tokens"`
+	TotalTokens            int                `json:"total_tokens"`
+	PromptTokensDetails    InputTokenDetails  `json:"prompt_tokens_details"`
+	CompletionTokenDetails OutputTokenDetails `json:"completion_tokens_details"`
 }

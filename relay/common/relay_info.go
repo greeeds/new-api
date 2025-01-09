@@ -1,17 +1,22 @@
 package common
 
 import (
-	"github.com/gin-gonic/gin"
 	"one-api/common"
-	"one-api/relay/constant"
+	"one-api/constant"
+	"one-api/dto"
+	relayconstant "one-api/relay/constant"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 type RelayInfo struct {
 	ChannelType          int
 	ChannelId            int
 	TokenId              int
+	TokenKey             string
 	UserId               int
 	Group                string
 	TokenUnlimited       bool
@@ -20,6 +25,8 @@ type RelayInfo struct {
 	setFirstResponse     bool
 	ApiType              int
 	IsStream             bool
+	IsPlayground         bool
+	UsePrice             bool
 	RelayMode            int
 	UpstreamModelName    string
 	OriginModelName      string
@@ -31,28 +38,48 @@ type RelayInfo struct {
 	BaseUrl              string
 	SupportStreamOptions bool
 	ShouldIncludeUsage   bool
+	ClientWs             *websocket.Conn
+	TargetWs             *websocket.Conn
+	InputAudioFormat     string
+	OutputAudioFormat    string
+	RealtimeTools        []dto.RealTimeTool
+	IsFirstRequest       bool
+	AudioUsage           bool
+	ChannelSetting       map[string]interface{}
+}
+
+func GenRelayInfoWs(c *gin.Context, ws *websocket.Conn) *RelayInfo {
+	info := GenRelayInfo(c)
+	info.ClientWs = ws
+	info.InputAudioFormat = "pcm16"
+	info.OutputAudioFormat = "pcm16"
+	info.IsFirstRequest = true
+	return info
 }
 
 func GenRelayInfo(c *gin.Context) *RelayInfo {
 	channelType := c.GetInt("channel_type")
 	channelId := c.GetInt("channel_id")
+	channelSetting := c.GetStringMap("channel_setting")
 
 	tokenId := c.GetInt("token_id")
+	tokenKey := c.GetString("token_key")
 	userId := c.GetInt("id")
 	group := c.GetString("group")
 	tokenUnlimited := c.GetBool("token_unlimited_quota")
-	startTime := time.Now()
+	startTime := c.GetTime(constant.ContextKeyRequestStartTime)
 	// firstResponseTime = time.Now() - 1 second
 
-	apiType, _ := constant.ChannelType2APIType(channelType)
+	apiType, _ := relayconstant.ChannelType2APIType(channelType)
 
 	info := &RelayInfo{
-		RelayMode:         constant.Path2RelayMode(c.Request.URL.Path),
+		RelayMode:         relayconstant.Path2RelayMode(c.Request.URL.Path),
 		BaseUrl:           c.GetString("base_url"),
 		RequestURLPath:    c.Request.URL.String(),
 		ChannelType:       channelType,
 		ChannelId:         channelId,
 		TokenId:           tokenId,
+		TokenKey:          tokenKey,
 		UserId:            userId,
 		Group:             group,
 		TokenUnlimited:    tokenUnlimited,
@@ -64,6 +91,12 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 		ApiVersion:        c.GetString("api_version"),
 		ApiKey:            strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		Organization:      c.GetString("channel_organization"),
+		ChannelSetting:    channelSetting,
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/pg") {
+		info.IsPlayground = true
+		info.RequestURLPath = strings.TrimPrefix(info.RequestURLPath, "/pg")
+		info.RequestURLPath = "/v1" + info.RequestURLPath
 	}
 	if info.BaseUrl == "" {
 		info.BaseUrl = common.ChannelBaseURLs[channelType]
@@ -76,7 +109,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 	}
 	if info.ChannelType == common.ChannelTypeOpenAI || info.ChannelType == common.ChannelTypeAnthropic ||
 		info.ChannelType == common.ChannelTypeAws || info.ChannelType == common.ChannelTypeGemini ||
-		info.ChannelType == common.ChannelCloudflare {
+		info.ChannelType == common.ChannelCloudflare || info.ChannelType == common.ChannelTypeAzure {
 		info.SupportStreamOptions = true
 	}
 	return info
@@ -126,10 +159,10 @@ func GenTaskRelayInfo(c *gin.Context) *TaskRelayInfo {
 	group := c.GetString("group")
 	startTime := time.Now()
 
-	apiType, _ := constant.ChannelType2APIType(channelType)
+	apiType, _ := relayconstant.ChannelType2APIType(channelType)
 
 	info := &TaskRelayInfo{
-		RelayMode:      constant.Path2RelayMode(c.Request.URL.Path),
+		RelayMode:      relayconstant.Path2RelayMode(c.Request.URL.Path),
 		BaseUrl:        c.GetString("base_url"),
 		RequestURLPath: c.Request.URL.String(),
 		ChannelType:    channelType,
@@ -145,4 +178,21 @@ func GenTaskRelayInfo(c *gin.Context) *TaskRelayInfo {
 		info.BaseUrl = common.ChannelBaseURLs[channelType]
 	}
 	return info
+}
+
+func (info *TaskRelayInfo) ToRelayInfo() *RelayInfo {
+	return &RelayInfo{
+		ChannelType:       info.ChannelType,
+		ChannelId:         info.ChannelId,
+		TokenId:           info.TokenId,
+		UserId:            info.UserId,
+		Group:             info.Group,
+		StartTime:         info.StartTime,
+		ApiType:           info.ApiType,
+		RelayMode:         info.RelayMode,
+		UpstreamModelName: info.UpstreamModelName,
+		RequestURLPath:    info.RequestURLPath,
+		ApiKey:            info.ApiKey,
+		BaseUrl:           info.BaseUrl,
+	}
 }

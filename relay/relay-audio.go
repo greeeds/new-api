@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"one-api/common"
-	"one-api/constant"
 	"one-api/dto"
 	"one-api/model"
 	relaycommon "one-api/relay/common"
 	relayconstant "one-api/relay/constant"
 	"one-api/service"
+	"one-api/setting"
 )
 
 func getAndValidAudioRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.AudioRequest, error) {
@@ -26,19 +26,26 @@ func getAndValidAudioRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.
 		if audioRequest.Model == "" {
 			return nil, errors.New("model is required")
 		}
-		if constant.ShouldCheckPromptSensitive() {
+		if setting.ShouldCheckPromptSensitive() {
 			err := service.CheckSensitiveInput(audioRequest.Input)
 			if err != nil {
 				return nil, err
 			}
 		}
 	default:
-		if audioRequest.Model == "" {
-			audioRequest.Model = c.PostForm("model")
+		err = c.Request.ParseForm()
+		if err != nil {
+			return nil, err
 		}
+		formData := c.Request.PostForm
+		if audioRequest.Model == "" {
+			audioRequest.Model = formData.Get("model")
+		}
+
 		if audioRequest.Model == "" {
 			return nil, errors.New("model is required")
 		}
+		audioRequest.ResponseFormat = formData.Get("response_format")
 		if audioRequest.ResponseFormat == "" {
 			audioRequest.ResponseFormat = "json"
 		}
@@ -46,7 +53,7 @@ func getAndValidAudioRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.
 	return audioRequest, nil
 }
 
-func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
+func AudioHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	relayInfo := relaycommon.GenRelayInfo(c)
 	audioRequest, err := getAndValidAudioRequest(c, relayInfo)
 
@@ -58,7 +65,7 @@ func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	promptTokens := 0
 	preConsumedTokens := common.PreConsumedQuota
 	if relayInfo.RelayMode == relayconstant.RelayModeAudioSpeech {
-		promptTokens, err = service.CountAudioToken(audioRequest.Input, audioRequest.Model)
+		promptTokens, err = service.CountTTSToken(audioRequest.Input, audioRequest.Model)
 		if err != nil {
 			return service.OpenAIErrorWrapper(err, "count_audio_token_failed", http.StatusInternalServerError)
 		}
@@ -67,31 +74,22 @@ func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	modelRatio := common.GetModelRatio(audioRequest.Model)
-	groupRatio := common.GetGroupRatio(relayInfo.Group)
+	groupRatio := setting.GetGroupRatio(relayInfo.Group)
 	ratio := modelRatio * groupRatio
 	preConsumedQuota := int(float64(preConsumedTokens) * ratio)
-	userQuota, err := model.CacheGetUserQuota(relayInfo.UserId)
+	userQuota, err := model.GetUserQuota(relayInfo.UserId, false)
 	if err != nil {
 		return service.OpenAIErrorWrapperLocal(err, "get_user_quota_failed", http.StatusInternalServerError)
 	}
-	if userQuota-preConsumedQuota < 0 {
-		return service.OpenAIErrorWrapperLocal(errors.New(fmt.Sprintf("audio pre-consumed quota failed, user quota: %d, need quota: %d", userQuota, preConsumedQuota)), "insufficient_user_quota", http.StatusBadRequest)
+	preConsumedQuota, userQuota, openaiErr = preConsumeQuota(c, preConsumedQuota, relayInfo)
+	if openaiErr != nil {
+		return openaiErr
 	}
-	err = model.CacheDecreaseUserQuota(relayInfo.UserId, preConsumedQuota)
-	if err != nil {
-		return service.OpenAIErrorWrapperLocal(err, "decrease_user_quota_failed", http.StatusInternalServerError)
-	}
-	if userQuota > 100*preConsumedQuota {
-		// in this case, we do not pre-consume quota
-		// because the user has enough quota
-		preConsumedQuota = 0
-	}
-	if preConsumedQuota > 0 {
-		userQuota, err = model.PreConsumeTokenQuota(relayInfo.TokenId, preConsumedQuota)
-		if err != nil {
-			return service.OpenAIErrorWrapperLocal(err, "pre_consume_token_quota_failed", http.StatusForbidden)
+	defer func() {
+		if openaiErr != nil {
+			returnPreConsumedQuota(c, relayInfo, userQuota, preConsumedQuota)
 		}
-	}
+	}()
 
 	// map model name
 	modelMapping := c.GetString("model_mapping")
@@ -123,21 +121,21 @@ func AudioHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-
 	statusCodeMappingStr := c.GetString("status_code_mapping")
+
+	var httpResp *http.Response
 	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
-			returnPreConsumedQuota(c, relayInfo.TokenId, userQuota, preConsumedQuota)
-			openaiErr := service.RelayErrorHandler(resp)
+		httpResp = resp.(*http.Response)
+		if httpResp.StatusCode != http.StatusOK {
+			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 			return openaiErr
 		}
 	}
 
-	usage, openaiErr := adaptor.DoResponse(c, resp, relayInfo)
+	usage, openaiErr := adaptor.DoResponse(c, httpResp, relayInfo)
 	if openaiErr != nil {
-		returnPreConsumedQuota(c, relayInfo.TokenId, userQuota, preConsumedQuota)
 		// reset status code 重置状态码
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr

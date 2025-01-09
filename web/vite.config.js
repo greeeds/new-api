@@ -26,6 +26,7 @@ export default defineConfig({
     esbuildOptions: {
       loader: {
         '.js': 'jsx',
+        '.json': 'json',
       },
     },
   },
@@ -45,6 +46,7 @@ export default defineConfig({
             'react-toastify',
             'react-turnstile',
           ],
+          'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
         },
       },
     },
@@ -52,6 +54,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/pg': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       },

@@ -2,7 +2,7 @@ package model
 
 import (
 	"one-api/common"
-	"one-api/constant"
+	"one-api/setting"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +31,7 @@ func InitOptionMap() {
 	common.OptionMap["PasswordRegisterEnabled"] = strconv.FormatBool(common.PasswordRegisterEnabled)
 	common.OptionMap["EmailVerificationEnabled"] = strconv.FormatBool(common.EmailVerificationEnabled)
 	common.OptionMap["GitHubOAuthEnabled"] = strconv.FormatBool(common.GitHubOAuthEnabled)
+	common.OptionMap["LinuxDOOAuthEnabled"] = strconv.FormatBool(common.LinuxDOOAuthEnabled)
 	common.OptionMap["TelegramOAuthEnabled"] = strconv.FormatBool(common.TelegramOAuthEnabled)
 	common.OptionMap["WeChatAuthEnabled"] = strconv.FormatBool(common.WeChatAuthEnabled)
 	common.OptionMap["TurnstileCheckEnabled"] = strconv.FormatBool(common.TurnstileCheckEnabled)
@@ -60,15 +61,16 @@ func InitOptionMap() {
 	common.OptionMap["SystemName"] = common.SystemName
 	common.OptionMap["Logo"] = common.Logo
 	common.OptionMap["ServerAddress"] = ""
-	common.OptionMap["WorkerUrl"] = constant.WorkerUrl
-	common.OptionMap["WorkerValidKey"] = constant.WorkerValidKey
+	common.OptionMap["WorkerUrl"] = setting.WorkerUrl
+	common.OptionMap["WorkerValidKey"] = setting.WorkerValidKey
 	common.OptionMap["PayAddress"] = ""
 	common.OptionMap["CustomCallbackAddress"] = ""
 	common.OptionMap["EpayId"] = ""
 	common.OptionMap["EpayKey"] = ""
-	common.OptionMap["Price"] = strconv.FormatFloat(constant.Price, 'f', -1, 64)
-	common.OptionMap["MinTopUp"] = strconv.Itoa(constant.MinTopUp)
+	common.OptionMap["Price"] = strconv.FormatFloat(setting.Price, 'f', -1, 64)
+	common.OptionMap["MinTopUp"] = strconv.Itoa(setting.MinTopUp)
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
+	common.OptionMap["Chats"] = setting.Chats2JsonString()
 	common.OptionMap["GitHubClientId"] = ""
 	common.OptionMap["GitHubClientSecret"] = ""
 	common.OptionMap["TelegramBotToken"] = ""
@@ -85,7 +87,8 @@ func InitOptionMap() {
 	common.OptionMap["PreConsumedQuota"] = strconv.Itoa(common.PreConsumedQuota)
 	common.OptionMap["ModelRatio"] = common.ModelRatio2JSONString()
 	common.OptionMap["ModelPrice"] = common.ModelPrice2JSONString()
-	common.OptionMap["GroupRatio"] = common.GroupRatio2JSONString()
+	common.OptionMap["GroupRatio"] = setting.GroupRatio2JSONString()
+	common.OptionMap["UserUsableGroups"] = setting.UserUsableGroups2JSONString()
 	common.OptionMap["CompletionRatio"] = common.CompletionRatio2JSONString()
 	common.OptionMap["TopUpLink"] = common.TopUpLink
 	common.OptionMap["ChatLink"] = common.ChatLink
@@ -95,17 +98,17 @@ func InitOptionMap() {
 	common.OptionMap["DataExportInterval"] = strconv.Itoa(common.DataExportInterval)
 	common.OptionMap["DataExportDefaultTime"] = common.DataExportDefaultTime
 	common.OptionMap["DefaultCollapseSidebar"] = strconv.FormatBool(common.DefaultCollapseSidebar)
-	common.OptionMap["MjNotifyEnabled"] = strconv.FormatBool(constant.MjNotifyEnabled)
-	common.OptionMap["MjAccountFilterEnabled"] = strconv.FormatBool(constant.MjAccountFilterEnabled)
-	common.OptionMap["MjModeClearEnabled"] = strconv.FormatBool(constant.MjModeClearEnabled)
-	common.OptionMap["MjForwardUrlEnabled"] = strconv.FormatBool(constant.MjForwardUrlEnabled)
-	common.OptionMap["MjActionCheckSuccessEnabled"] = strconv.FormatBool(constant.MjActionCheckSuccessEnabled)
-	common.OptionMap["CheckSensitiveEnabled"] = strconv.FormatBool(constant.CheckSensitiveEnabled)
-	common.OptionMap["CheckSensitiveOnPromptEnabled"] = strconv.FormatBool(constant.CheckSensitiveOnPromptEnabled)
+	common.OptionMap["MjNotifyEnabled"] = strconv.FormatBool(setting.MjNotifyEnabled)
+	common.OptionMap["MjAccountFilterEnabled"] = strconv.FormatBool(setting.MjAccountFilterEnabled)
+	common.OptionMap["MjModeClearEnabled"] = strconv.FormatBool(setting.MjModeClearEnabled)
+	common.OptionMap["MjForwardUrlEnabled"] = strconv.FormatBool(setting.MjForwardUrlEnabled)
+	common.OptionMap["MjActionCheckSuccessEnabled"] = strconv.FormatBool(setting.MjActionCheckSuccessEnabled)
+	common.OptionMap["CheckSensitiveEnabled"] = strconv.FormatBool(setting.CheckSensitiveEnabled)
+	common.OptionMap["CheckSensitiveOnPromptEnabled"] = strconv.FormatBool(setting.CheckSensitiveOnPromptEnabled)
 	//common.OptionMap["CheckSensitiveOnCompletionEnabled"] = strconv.FormatBool(constant.CheckSensitiveOnCompletionEnabled)
-	common.OptionMap["StopOnSensitiveEnabled"] = strconv.FormatBool(constant.StopOnSensitiveEnabled)
-	common.OptionMap["SensitiveWords"] = constant.SensitiveWordsToString()
-	common.OptionMap["StreamCacheQueueLength"] = strconv.Itoa(constant.StreamCacheQueueLength)
+	common.OptionMap["StopOnSensitiveEnabled"] = strconv.FormatBool(setting.StopOnSensitiveEnabled)
+	common.OptionMap["SensitiveWords"] = setting.SensitiveWordsToString()
+	common.OptionMap["StreamCacheQueueLength"] = strconv.Itoa(setting.StreamCacheQueueLength)
 	common.OptionMap["SMTPAuthLoginEnabled"] = strconv.FormatBool(common.SMTPAuthLoginEnabled)
 
 	common.OptionMapRWMutex.Unlock()
@@ -174,6 +177,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.EmailVerificationEnabled = boolValue
 		case "GitHubOAuthEnabled":
 			common.GitHubOAuthEnabled = boolValue
+		case "LinuxDOOAuthEnabled":
+			common.LinuxDOOAuthEnabled = boolValue
 		case "WeChatAuthEnabled":
 			common.WeChatAuthEnabled = boolValue
 		case "TelegramOAuthEnabled":
@@ -205,23 +210,23 @@ func updateOptionMap(key string, value string) (err error) {
 		case "DefaultCollapseSidebar":
 			common.DefaultCollapseSidebar = boolValue
 		case "MjNotifyEnabled":
-			constant.MjNotifyEnabled = boolValue
+			setting.MjNotifyEnabled = boolValue
 		case "MjAccountFilterEnabled":
-			constant.MjAccountFilterEnabled = boolValue
+			setting.MjAccountFilterEnabled = boolValue
 		case "MjModeClearEnabled":
-			constant.MjModeClearEnabled = boolValue
+			setting.MjModeClearEnabled = boolValue
 		case "MjForwardUrlEnabled":
-			constant.MjForwardUrlEnabled = boolValue
+			setting.MjForwardUrlEnabled = boolValue
 		case "MjActionCheckSuccessEnabled":
-			constant.MjActionCheckSuccessEnabled = boolValue
+			setting.MjActionCheckSuccessEnabled = boolValue
 		case "CheckSensitiveEnabled":
-			constant.CheckSensitiveEnabled = boolValue
+			setting.CheckSensitiveEnabled = boolValue
 		case "CheckSensitiveOnPromptEnabled":
-			constant.CheckSensitiveOnPromptEnabled = boolValue
+			setting.CheckSensitiveOnPromptEnabled = boolValue
 		//case "CheckSensitiveOnCompletionEnabled":
 		//	constant.CheckSensitiveOnCompletionEnabled = boolValue
 		case "StopOnSensitiveEnabled":
-			constant.StopOnSensitiveEnabled = boolValue
+			setting.StopOnSensitiveEnabled = boolValue
 		case "SMTPSSLEnabled":
 			common.SMTPSSLEnabled = boolValue
 		case "SMTPAuthLoginEnabled":
@@ -243,29 +248,35 @@ func updateOptionMap(key string, value string) (err error) {
 	case "SMTPToken":
 		common.SMTPToken = value
 	case "ServerAddress":
-		constant.ServerAddress = value
+		setting.ServerAddress = value
 	case "WorkerUrl":
-		constant.WorkerUrl = value
+		setting.WorkerUrl = value
 	case "WorkerValidKey":
-		constant.WorkerValidKey = value
+		setting.WorkerValidKey = value
 	case "PayAddress":
-		constant.PayAddress = value
+		setting.PayAddress = value
+	case "Chats":
+		err = setting.UpdateChatsByJsonString(value)
 	case "CustomCallbackAddress":
-		constant.CustomCallbackAddress = value
+		setting.CustomCallbackAddress = value
 	case "EpayId":
-		constant.EpayId = value
+		setting.EpayId = value
 	case "EpayKey":
-		constant.EpayKey = value
+		setting.EpayKey = value
 	case "Price":
-		constant.Price, _ = strconv.ParseFloat(value, 64)
+		setting.Price, _ = strconv.ParseFloat(value, 64)
 	case "MinTopUp":
-		constant.MinTopUp, _ = strconv.Atoi(value)
+		setting.MinTopUp, _ = strconv.Atoi(value)
 	case "TopupGroupRatio":
 		err = common.UpdateTopupGroupRatioByJSONString(value)
 	case "GitHubClientId":
 		common.GitHubClientId = value
 	case "GitHubClientSecret":
 		common.GitHubClientSecret = value
+	case "LinuxDOClientId":
+		common.LinuxDOClientId = value
+	case "LinuxDOClientSecret":
+		common.LinuxDOClientSecret = value
 	case "Footer":
 		common.Footer = value
 	case "SystemName":
@@ -305,7 +316,9 @@ func updateOptionMap(key string, value string) (err error) {
 	case "ModelRatio":
 		err = common.UpdateModelRatioByJSONString(value)
 	case "GroupRatio":
-		err = common.UpdateGroupRatioByJSONString(value)
+		err = setting.UpdateGroupRatioByJSONString(value)
+	case "UserUsableGroups":
+		err = setting.UpdateUserUsableGroupsByJSONString(value)
 	case "CompletionRatio":
 		err = common.UpdateCompletionRatioByJSONString(value)
 	case "ModelPrice":
@@ -321,9 +334,9 @@ func updateOptionMap(key string, value string) (err error) {
 	case "QuotaPerUnit":
 		common.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
 	case "SensitiveWords":
-		constant.SensitiveWordsFromString(value)
+		setting.SensitiveWordsFromString(value)
 	case "StreamCacheQueueLength":
-		constant.StreamCacheQueueLength, _ = strconv.Atoi(value)
+		setting.StreamCacheQueueLength, _ = strconv.Atoi(value)
 	}
 	return err
 }

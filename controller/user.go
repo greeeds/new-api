@@ -6,8 +6,12 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/model"
+	"one-api/setting"
 	"strconv"
+	"strings"
 	"sync"
+
+	"one-api/constant"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -66,6 +70,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 	session.Set("username", user.Username)
 	session.Set("role", user.Role)
 	session.Set("status", user.Status)
+	session.Set("group", user.Group)
 	err := session.Save()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -157,8 +162,9 @@ func Register(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": "数据库错误，请稍后重试",
 		})
+		common.SysError(fmt.Sprintf("CheckUserExistOrDeleted error: %v", err))
 		return
 	}
 	if exist {
@@ -186,6 +192,48 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
+
+	// 获取插入后的用户ID
+	var insertedUser model.User
+	if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户注册失败或用户ID获取失败",
+		})
+		return
+	}
+	// 生成默认令牌
+	if constant.GenerateDefaultToken {
+		key, err := common.GenerateKey()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "生成默认令牌失败",
+			})
+			common.SysError("failed to generate token key: " + err.Error())
+			return
+		}
+		// 生成默认令牌
+		token := model.Token{
+			UserId:             insertedUser.Id, // 使用插入后的用户ID
+			Name:               cleanUser.Username + "的初始令牌",
+			Key:                key,
+			CreatedTime:        common.GetTimestamp(),
+			AccessedTime:       common.GetTimestamp(),
+			ExpiredTime:        -1,     // 永不过期
+			RemainQuota:        500000, // 示例额度
+			UnlimitedQuota:     true,
+			ModelLimitsEnabled: false,
+		}
+		if err := token.Insert(); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "创建默认令牌失败",
+			})
+			return
+		}
+	}
+
 	common.SendRegisterEmail(cleanUser.Username)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -196,10 +244,14 @@ func Register(c *gin.Context) {
 
 func GetAllUsers(c *gin.Context) {
 	p, _ := strconv.Atoi(c.Query("p"))
-	if p < 0 {
-		p = 0
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	if p < 1 {
+		p = 1
 	}
-	users, err := model.GetAllUsers(p*common.ItemsPerPage, common.ItemsPerPage)
+	if pageSize < 0 {
+		pageSize = common.ItemsPerPage
+	}
+	users, total, err := model.GetAllUsers((p-1)*pageSize, pageSize)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -210,7 +262,12 @@ func GetAllUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    users,
+		"data": gin.H{
+			"items":     users,
+			"total":     total,
+			"page":      p,
+			"page_size": pageSize,
+		},
 	})
 	return
 }
@@ -218,7 +275,16 @@ func GetAllUsers(c *gin.Context) {
 func SearchUsers(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
-	users, err := model.SearchUsers(keyword, group)
+	p, _ := strconv.Atoi(c.Query("p"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	if p < 1 {
+		p = 1
+	}
+	if pageSize < 0 {
+		pageSize = common.ItemsPerPage
+	}
+	startIdx := (p - 1) * pageSize
+	users, total, err := model.SearchUsers(keyword, group, startIdx, pageSize)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -229,7 +295,12 @@ func SearchUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    users,
+		"data": gin.H{
+			"items":     users,
+			"total":     total,
+			"page":      p,
+			"page_size": pageSize,
+		},
 	})
 	return
 }
@@ -277,7 +348,18 @@ func GenerateAccessToken(c *gin.Context) {
 		})
 		return
 	}
-	user.AccessToken = common.GetUUID()
+	// get rand int 28-32
+	randI := common.GetRandomInt(4)
+	key, err := common.GenerateRandomKey(29 + randI)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "生成失败",
+		})
+		common.SysError("failed to generate key: " + err.Error())
+		return
+	}
+	user.SetAccessToken(key)
 
 	if model.DB.Where("access_token = ?", user.AccessToken).First(user).RowsAffected != 0 {
 		c.JSON(http.StatusOK, gin.H{
@@ -398,7 +480,15 @@ func GetUserModels(c *gin.Context) {
 		})
 		return
 	}
-	models := model.GetGroupModels(user.Group)
+	groups := setting.GetUserUsableGroups(user.Group)
+	var models []string
+	for group := range groups {
+		for _, g := range model.GetGroupModels(group) {
+			if !common.StringsContains(models, g) {
+				models = append(models, g)
+			}
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -583,6 +673,7 @@ func DeleteSelf(c *gin.Context) {
 func CreateUser(c *gin.Context) {
 	var user model.User
 	err := json.NewDecoder(c.Request.Body).Decode(&user)
+	user.Username = strings.TrimSpace(user.Username)
 	if err != nil || user.Username == "" || user.Password == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -630,8 +721,8 @@ func CreateUser(c *gin.Context) {
 }
 
 type ManageRequest struct {
-	Username string `json:"username"`
-	Action   string `json:"action"`
+	Id     int    `json:"id"`
+	Action string `json:"action"`
 }
 
 // ManageUser Only admin user can do this
@@ -647,7 +738,7 @@ func ManageUser(c *gin.Context) {
 		return
 	}
 	user := model.User{
-		Username: req.Username,
+		Id: req.Id,
 	}
 	// Fill attributes
 	model.DB.Unscoped().Where(&user).First(&user)

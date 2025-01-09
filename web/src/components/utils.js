@@ -1,7 +1,12 @@
 import { API, showError } from '../helpers';
 
 export async function getOAuthState() {
-  const res = await API.get('/api/oauth/state');
+  let path = '/api/oauth/state';
+  let affCode = localStorage.getItem('aff');
+  if (affCode && affCode.length > 0) {
+    path += `?aff=${affCode}`;
+  }
+  const res = await API.get(path);
   const { success, message, data } = res.data;
   if (success) {
     return data;
@@ -16,6 +21,14 @@ export async function onGitHubOAuthClicked(github_client_id) {
   if (!state) return;
   window.open(
     `https://github.com/login/oauth/authorize?client_id=${github_client_id}&state=${state}&scope=user:email`,
+  );
+}
+
+export async function onLinuxDOOAuthClicked(linuxdo_client_id) {
+  const state = await getOAuthState();
+  if (!state) return;
+  window.open(
+    `https://connect.linux.do/oauth2/authorize?response_type=code&client_id=${linuxdo_client_id}&state=${state}`,
   );
 }
 

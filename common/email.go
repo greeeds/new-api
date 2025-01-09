@@ -40,14 +40,25 @@ func SendRegisterEmail(username string) {
 	}
 }
 
-func generateMessageID() string {
+func generateMessageID() (string, error) {
+	split := strings.Split(SMTPFrom, "@")
+	if len(split) < 2 {
+		return "", fmt.Errorf("invalid SMTP account")
+	}
 	domain := strings.Split(SMTPFrom, "@")[1]
-	return fmt.Sprintf("<%d.%s@%s>", time.Now().UnixNano(), GetRandomString(12), domain)
+	return fmt.Sprintf("<%d.%s@%s>", time.Now().UnixNano(), GetRandomString(12), domain), nil
 }
 
 func SendEmail(subject string, receiver string, content string) error {
 	if SMTPFrom == "" { // for compatibility
 		SMTPFrom = SMTPAccount
+	}
+	id, err2 := generateMessageID()
+	if err2 != nil {
+		return err2
+	}
+	if SMTPServer == "" && SMTPAccount == "" {
+		return fmt.Errorf("SMTP 服务器未配置")
 	}
 	encodedSubject := fmt.Sprintf("=?UTF-8?B?%s?=", base64.StdEncoding.EncodeToString([]byte(subject)))
 	mail := []byte(fmt.Sprintf("To: %s\r\n"+
@@ -56,7 +67,7 @@ func SendEmail(subject string, receiver string, content string) error {
 		"Date: %s\r\n"+
 		"Message-ID: %s\r\n"+ // 添加 Message-ID 头
 		"Content-Type: text/html; charset=UTF-8\r\n\r\n%s\r\n",
-		receiver, SystemName, SMTPFrom, encodedSubject, time.Now().Format(time.RFC1123Z), generateMessageID(), content))
+		receiver, SystemName, SMTPFrom, encodedSubject, time.Now().Format(time.RFC1123Z), id, content))
 	var auth smtp.Auth
 	if SMTPAuthLoginEnabled {
 		auth = LoginAuth(SMTPAccount, SMTPToken)
@@ -104,11 +115,11 @@ func SendEmail(subject string, receiver string, content string) error {
 		if err != nil {
 			return err
 		}
-	} else if isOutlookServer(SMTPAccount) {
+	} else if isOutlookServer(SMTPAccount) || SMTPServer == "smtp.azurecomm.net" {
 		auth = LoginAuth(SMTPAccount, SMTPToken)
-		err = smtp.SendMail(addr, auth, SMTPAccount, to, mail)
+		err = smtp.SendMail(addr, auth, SMTPFrom, to, mail)
 	} else {
-		err = smtp.SendMail(addr, auth, SMTPAccount, to, mail)
+		err = smtp.SendMail(addr, auth, SMTPFrom, to, mail)
 	}
 	return err
 }

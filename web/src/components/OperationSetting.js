@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spin } from '@douyinfe/semi-ui';
+import { Card, Spin, Tabs } from '@douyinfe/semi-ui';
 import SettingsGeneral from '../pages/Setting/Operation/SettingsGeneral.js';
 import SettingsDrawing from '../pages/Setting/Operation/SettingsDrawing.js';
 import SettingsSensitiveWords from '../pages/Setting/Operation/SettingsSensitiveWords.js';
@@ -8,10 +8,17 @@ import SettingsDataDashboard from '../pages/Setting/Operation/SettingsDataDashbo
 import SettingsMonitoring from '../pages/Setting/Operation/SettingsMonitoring.js';
 import SettingsCreditLimit from '../pages/Setting/Operation/SettingsCreditLimit.js';
 import SettingsMagnification from '../pages/Setting/Operation/SettingsMagnification.js';
+import ModelSettingsVisualEditor from '../pages/Setting/Operation/ModelSettingsVisualEditor.js';
+import GroupRatioSettings from '../pages/Setting/Operation/GroupRatioSettings.js';
+import ModelRatioSettings from '../pages/Setting/Operation/ModelRatioSettings.js';
+
 
 import { API, showError, showSuccess } from '../helpers';
+import SettingsChats from '../pages/Setting/Operation/SettingsChats.js';
+import { useTranslation } from 'react-i18next';
 
 const OperationSetting = () => {
+  const { t } = useTranslation();
   let [inputs, setInputs] = useState({
     QuotaForNewUser: 0,
     QuotaForInviter: 0,
@@ -23,6 +30,7 @@ const OperationSetting = () => {
     CompletionRatio: '',
     ModelPrice: '',
     GroupRatio: '',
+    UserUsableGroups: '',
     TopUpLink: '',
     ChatLink: '',
     ChatLink2: '', // 添加的新状态变量
@@ -49,6 +57,7 @@ const OperationSetting = () => {
     DataExportInterval: 5,
     DefaultCollapseSidebar: false, // 默认折叠侧边栏
     RetryTimes: 0,
+    Chats: "[]",
   });
 
   let [loading, setLoading] = useState(false);
@@ -62,6 +71,7 @@ const OperationSetting = () => {
         if (
           item.key === 'ModelRatio' ||
           item.key === 'GroupRatio' ||
+          item.key === 'UserUsableGroups' ||
           item.key === 'CompletionRatio' ||
           item.key === 'ModelPrice'
         ) {
@@ -86,7 +96,7 @@ const OperationSetting = () => {
     try {
       setLoading(true);
       await getOptions();
-      showSuccess('刷新成功');
+      // showSuccess('刷新成功');
     } catch (error) {
       showError('刷新失败');
     } finally {
@@ -129,9 +139,24 @@ const OperationSetting = () => {
         <Card style={{ marginTop: '10px' }}>
           <SettingsCreditLimit options={inputs} refresh={onRefresh} />
         </Card>
-        {/* 倍率设置 */}
+        {/* 聊天设置 */}
         <Card style={{ marginTop: '10px' }}>
-          <SettingsMagnification options={inputs} refresh={onRefresh} />
+          <SettingsChats options={inputs} refresh={onRefresh} />
+        </Card>
+        {/* 分组倍率设置 */}
+        <Card style={{ marginTop: '10px' }}>
+          <GroupRatioSettings options={inputs} refresh={onRefresh} />
+        </Card>
+        {/* 合并模型倍率设置和可视化倍率设置 */}
+        <Card style={{ marginTop: '10px' }}>
+          <Tabs type="line">
+            <Tabs.TabPane tab={t('模型倍率设置')} itemKey="model">
+              <ModelRatioSettings options={inputs} refresh={onRefresh} />
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={t('可视化倍率设置')} itemKey="visual">
+              <ModelSettingsVisualEditor options={inputs} refresh={onRefresh} />
+            </Tabs.TabPane>
+          </Tabs>
         </Card>
       </Spin>
     </>

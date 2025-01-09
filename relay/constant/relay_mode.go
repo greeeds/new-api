@@ -38,11 +38,13 @@ const (
 	RelayModeSunoSubmit
 
 	RelayModeRerank
+
+	RelayModeRealtime
 )
 
 func Path2RelayMode(path string) int {
 	relayMode := RelayModeUnknown
-	if strings.HasPrefix(path, "/v1/chat/completions") {
+	if strings.HasPrefix(path, "/v1/chat/completions") || strings.HasPrefix(path, "/pg/chat/completions") {
 		relayMode = RelayModeChatCompletions
 	} else if strings.HasPrefix(path, "/v1/completions") {
 		relayMode = RelayModeCompletions
@@ -64,6 +66,8 @@ func Path2RelayMode(path string) int {
 		relayMode = RelayModeAudioTranslation
 	} else if strings.HasPrefix(path, "/v1/rerank") {
 		relayMode = RelayModeRerank
+	} else if strings.HasPrefix(path, "/v1/realtime") {
+		relayMode = RelayModeRealtime
 	}
 	return relayMode
 }

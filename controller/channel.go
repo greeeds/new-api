@@ -3,12 +3,13 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"one-api/common"
 	"one-api/model"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type OpenAIModel struct {
@@ -48,19 +49,41 @@ func GetAllChannels(c *gin.Context) {
 	if pageSize < 0 {
 		pageSize = common.ItemsPerPage
 	}
+	channelData := make([]*model.Channel, 0)
 	idSort, _ := strconv.ParseBool(c.Query("id_sort"))
-	channels, err := model.GetAllChannels(p*pageSize, pageSize, false, idSort)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
+	enableTagMode, _ := strconv.ParseBool(c.Query("tag_mode"))
+	if enableTagMode {
+		tags, err := model.GetPaginatedTags(p*pageSize, pageSize)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		for _, tag := range tags {
+			if tag != nil && *tag != "" {
+				tagChannel, err := model.GetChannelsByTag(*tag, idSort)
+				if err == nil {
+					channelData = append(channelData, tagChannel...)
+				}
+			}
+		}
+	} else {
+		channels, err := model.GetAllChannels(p*pageSize, pageSize, false, idSort)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		channelData = channels
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channels,
+		"data":    channelData,
 	})
 	return
 }
@@ -74,6 +97,7 @@ func FetchUpstreamModels(c *gin.Context) {
 		})
 		return
 	}
+
 	channel, err := model.GetChannelById(id, true)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -82,34 +106,35 @@ func FetchUpstreamModels(c *gin.Context) {
 		})
 		return
 	}
-	if channel.Type != common.ChannelTypeOpenAI {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "仅支持 OpenAI 类型渠道",
-		})
-		return
+
+	//if channel.Type != common.ChannelTypeOpenAI {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"success": false,
+	//		"message": "仅支持 OpenAI 类型渠道",
+	//	})
+	//	return
+	//}
+	baseURL := common.ChannelBaseURLs[channel.Type]
+	if channel.GetBaseURL() != "" {
+		baseURL = channel.GetBaseURL()
 	}
-	url := fmt.Sprintf("%s/v1/models", *channel.BaseURL)
+	url := fmt.Sprintf("%s/v1/models", baseURL)
 	body, err := GetResponseBody("GET", url, channel, GetAuthHeader(channel.Key))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
+		return
 	}
-	result := OpenAIModelsResponse{}
-	err = json.Unmarshal(body, &result)
-	if err != nil {
+
+	var result OpenAIModelsResponse
+	if err = json.Unmarshal(body, &result); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("解析响应失败: %s", err.Error()),
 		})
-	}
-	if !result.Success {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "上游返回错误",
-		})
+		return
 	}
 
 	var ids []string
@@ -144,19 +169,41 @@ func SearchChannels(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
 	modelKeyword := c.Query("model")
-	//idSort, _ := strconv.ParseBool(c.Query("id_sort"))
-	channels, err := model.SearchChannels(keyword, group, modelKeyword)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
+	idSort, _ := strconv.ParseBool(c.Query("id_sort"))
+	enableTagMode, _ := strconv.ParseBool(c.Query("tag_mode"))
+	channelData := make([]*model.Channel, 0)
+	if enableTagMode {
+		tags, err := model.SearchTags(keyword, group, modelKeyword, idSort)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		for _, tag := range tags {
+			if tag != nil && *tag != "" {
+				tagChannel, err := model.GetChannelsByTag(*tag, idSort)
+				if err == nil {
+					channelData = append(channelData, tagChannel...)
+				}
+			}
+		}
+	} else {
+		channels, err := model.SearchChannels(keyword, group, modelKeyword, idSort)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		channelData = channels
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channels,
+		"data":    channelData,
 	})
 	return
 }
@@ -227,6 +274,17 @@ func AddChannel(c *gin.Context) {
 		}
 		localChannel := channel
 		localChannel.Key = key
+		// Validate the length of the model name
+		models := strings.Split(localChannel.Models, ",")
+		for _, model := range models {
+			if len(model) > 255 {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": fmt.Sprintf("模型名称过长: %s", model),
+				})
+				return
+			}
+		}
 		channels = append(channels, localChannel)
 	}
 	err = model.BatchInsertChannels(channels)
@@ -279,8 +337,101 @@ func DeleteDisabledChannel(c *gin.Context) {
 	return
 }
 
+type ChannelTag struct {
+	Tag          string  `json:"tag"`
+	NewTag       *string `json:"new_tag"`
+	Priority     *int64  `json:"priority"`
+	Weight       *uint   `json:"weight"`
+	ModelMapping *string `json:"model_mapping"`
+	Models       *string `json:"models"`
+	Groups       *string `json:"groups"`
+}
+
+func DisableTagChannels(c *gin.Context) {
+	channelTag := ChannelTag{}
+	err := c.ShouldBindJSON(&channelTag)
+	if err != nil || channelTag.Tag == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误",
+		})
+		return
+	}
+	err = model.DisableChannelByTag(channelTag.Tag)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
+}
+
+func EnableTagChannels(c *gin.Context) {
+	channelTag := ChannelTag{}
+	err := c.ShouldBindJSON(&channelTag)
+	if err != nil || channelTag.Tag == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误",
+		})
+		return
+	}
+	err = model.EnableChannelByTag(channelTag.Tag)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
+}
+
+func EditTagChannels(c *gin.Context) {
+	channelTag := ChannelTag{}
+	err := c.ShouldBindJSON(&channelTag)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误",
+		})
+		return
+	}
+	if channelTag.Tag == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "tag不能为空",
+		})
+		return
+	}
+	err = model.EditChannelByTag(channelTag.Tag, channelTag.NewTag, channelTag.ModelMapping, channelTag.Models, channelTag.Groups, channelTag.Priority, channelTag.Weight)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
+}
+
 type ChannelBatch struct {
-	Ids []int `json:"ids"`
+	Ids []int   `json:"ids"`
+	Tag *string `json:"tag"`
 }
 
 func DeleteChannelBatch(c *gin.Context) {
@@ -352,6 +503,108 @@ func UpdateChannel(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    channel,
+	})
+	return
+}
+
+func FetchModels(c *gin.Context) {
+	var req struct {
+		BaseURL string `json:"base_url"`
+		Key     string `json:"key"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request",
+		})
+		return
+	}
+
+	baseURL := req.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+	}
+
+	client := &http.Client{}
+	url := fmt.Sprintf("%s/v1/models", baseURL)
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	request.Header.Set("Authorization", "Bearer "+req.Key)
+
+	response, err := client.Do(request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	//check status code
+	if response.StatusCode != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to fetch models",
+		})
+		return
+	}
+	defer response.Body.Close()
+
+	var result struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	var models []string
+	for _, model := range result.Data {
+		models = append(models, model.ID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    models,
+	})
+}
+
+func BatchSetChannelTag(c *gin.Context) {
+	channelBatch := ChannelBatch{}
+	err := c.ShouldBindJSON(&channelBatch)
+	if err != nil || len(channelBatch.Ids) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误",
+		})
+		return
+	}
+	err = model.BatchSetChannelTag(channelBatch.Ids, channelBatch.Tag)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    len(channelBatch.Ids),
 	})
 	return
 }

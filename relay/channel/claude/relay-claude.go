@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"one-api/common"
@@ -12,6 +11,8 @@ import (
 	relaycommon "one-api/relay/common"
 	"one-api/service"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 func stopReasonClaude2OpenAI(reason string) string {
@@ -108,13 +109,10 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 		}
 	}
 	formatMessages := make([]dto.Message, 0)
-	var lastMessage *dto.Message
+	lastMessage := dto.Message{
+		Role: "tool",
+	}
 	for i, message := range textRequest.Messages {
-		//if message.Role == "system" {
-		//	if i != 0 {
-		//		message.Role = "user"
-		//	}
-		//}
 		if message.Role == "" {
 			textRequest.Messages[i].Role = "user"
 		}
@@ -122,7 +120,13 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 			Role:    message.Role,
 			Content: message.Content,
 		}
-		if lastMessage != nil && lastMessage.Role == message.Role {
+		if message.Role == "tool" {
+			fmtMessage.ToolCallId = message.ToolCallId
+		}
+		if message.Role == "assistant" && message.ToolCalls != nil {
+			fmtMessage.ToolCalls = message.ToolCalls
+		}
+		if lastMessage.Role == message.Role && lastMessage.Role != "tool" {
 			if lastMessage.IsStringContent() && message.IsStringContent() {
 				content, _ := json.Marshal(strings.Trim(fmt.Sprintf("%s %s", lastMessage.StringContent(), message.StringContent()), "\""))
 				fmtMessage.Content = content
@@ -135,7 +139,7 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 			fmtMessage.Content = content
 		}
 		formatMessages = append(formatMessages, fmtMessage)
-		lastMessage = &textRequest.Messages[i]
+		lastMessage = fmtMessage
 	}
 
 	claudeMessages := make([]ClaudeMessage, 0)
@@ -174,7 +178,35 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 			claudeMessage := ClaudeMessage{
 				Role: message.Role,
 			}
-			if message.IsStringContent() {
+			if message.Role == "tool" {
+				if len(claudeMessages) > 0 && claudeMessages[len(claudeMessages)-1].Role == "user" {
+					lastMessage := claudeMessages[len(claudeMessages)-1]
+					if content, ok := lastMessage.Content.(string); ok {
+						lastMessage.Content = []ClaudeMediaMessage{
+							{
+								Type: "text",
+								Text: content,
+							},
+						}
+					}
+					lastMessage.Content = append(lastMessage.Content.([]ClaudeMediaMessage), ClaudeMediaMessage{
+						Type:      "tool_result",
+						ToolUseId: message.ToolCallId,
+						Content:   message.StringContent(),
+					})
+					claudeMessages[len(claudeMessages)-1] = lastMessage
+					continue
+				} else {
+					claudeMessage.Role = "user"
+					claudeMessage.Content = []ClaudeMediaMessage{
+						{
+							Type:      "tool_result",
+							ToolUseId: message.ToolCallId,
+							Content:   message.StringContent(),
+						},
+					}
+				}
+			} else if message.IsStringContent() && message.ToolCalls == nil {
 				claudeMessage.Content = message.StringContent()
 			} else {
 				claudeMediaMessages := make([]ClaudeMediaMessage, 0)
@@ -193,9 +225,12 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 						// 判断是否是url
 						if strings.HasPrefix(imageUrl.Url, "http") {
 							// 是url，获取图片的类型和base64编码的数据
-							mimeType, data, _ := service.GetImageFromUrl(imageUrl.Url)
-							claudeMediaMessage.Source.MediaType = mimeType
-							claudeMediaMessage.Source.Data = data
+							fileData, err := service.GetFileBase64FromUrl(imageUrl.Url)
+							if err != nil {
+								return nil, fmt.Errorf("get file base64 from url failed: %s", err.Error())
+							}
+							claudeMediaMessage.Source.MediaType = fileData.MimeType
+							claudeMediaMessage.Source.Data = fileData.Base64Data
 						} else {
 							_, format, base64String, err := service.DecodeBase64ImageData(imageUrl.Url)
 							if err != nil {
@@ -206,6 +241,21 @@ func RequestOpenAI2ClaudeMessage(textRequest dto.GeneralOpenAIRequest) (*ClaudeR
 						}
 					}
 					claudeMediaMessages = append(claudeMediaMessages, claudeMediaMessage)
+				}
+				if message.ToolCalls != nil {
+					for _, toolCall := range message.ParseToolCalls() {
+						inputObj := make(map[string]any)
+						if err := json.Unmarshal([]byte(toolCall.Function.Arguments), &inputObj); err != nil {
+							common.SysError("tool call function arguments is not a map[string]any: " + fmt.Sprintf("%v", toolCall.Function.Arguments))
+							continue
+						}
+						claudeMediaMessages = append(claudeMediaMessages, ClaudeMediaMessage{
+							Type:  "tool_use",
+							Id:    toolCall.ID,
+							Name:  toolCall.Function.Name,
+							Input: inputObj,
+						})
+					}
 				}
 				claudeMessage.Content = claudeMediaMessages
 			}
@@ -339,8 +389,9 @@ func ResponseClaude2OpenAI(reqMode int, claudeResponse *ClaudeResponse) *dto.Ope
 	}
 	choice.SetStringContent(responseText)
 	if len(tools) > 0 {
-		choice.Message.ToolCalls = tools
+		choice.Message.SetToolCalls(tools)
 	}
+	fullTextResponse.Model = claudeResponse.Model
 	choices = append(choices, choice)
 	fullTextResponse.Choices = choices
 	return &fullTextResponse
@@ -454,7 +505,7 @@ func ClaudeHandler(c *gin.Context, resp *http.Response, requestMode int, info *r
 		}, nil
 	}
 	fullTextResponse := ResponseClaude2OpenAI(requestMode, &claudeResponse)
-	completionTokens, err := service.CountTokenText(claudeResponse.Completion, info.OriginModelName)
+	completionTokens, err := service.CountTextToken(claudeResponse.Completion, info.OriginModelName)
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "count_token_text_failed", http.StatusInternalServerError), nil
 	}

@@ -2,9 +2,11 @@ package model
 
 import (
 	"encoding/json"
-	"gorm.io/gorm"
 	"one-api/common"
 	"strings"
+	"sync"
+
+	"gorm.io/gorm"
 )
 
 type Channel struct {
@@ -32,6 +34,8 @@ type Channel struct {
 	Priority          *int64  `json:"priority" gorm:"bigint;default:0"`
 	AutoBan           *int    `json:"auto_ban" gorm:"default:1"`
 	OtherInfo         string  `json:"other_info"`
+	Tag               *string `json:"tag" gorm:"index"`
+	Setting           string  `json:"setting" gorm:"type:text"`
 }
 
 func (channel *Channel) GetModels() []string {
@@ -61,6 +65,17 @@ func (channel *Channel) SetOtherInfo(otherInfo map[string]interface{}) {
 	channel.OtherInfo = string(otherInfoBytes)
 }
 
+func (channel *Channel) GetTag() string {
+	if channel.Tag == nil {
+		return ""
+	}
+	return *channel.Tag
+}
+
+func (channel *Channel) SetTag(tag string) {
+	channel.Tag = &tag
+}
+
 func (channel *Channel) GetAutoBan() bool {
 	if channel.AutoBan == nil {
 		return false
@@ -87,17 +102,29 @@ func GetAllChannels(startIdx int, num int, selectAll bool, idSort bool) ([]*Chan
 	return channels, err
 }
 
-func SearchChannels(keyword string, group string, model string) ([]*Channel, error) {
+func GetChannelsByTag(tag string, idSort bool) ([]*Channel, error) {
 	var channels []*Channel
-	keyCol := "`key`"
-	groupCol := "`group`"
+	order := "priority desc"
+	if idSort {
+		order = "id desc"
+	}
+	err := DB.Where("tag = ?", tag).Order(order).Find(&channels).Error
+	return channels, err
+}
+
+func SearchChannels(keyword string, group string, model string, idSort bool) ([]*Channel, error) {
+	var channels []*Channel
 	modelsCol := "`models`"
 
 	// 如果是 PostgreSQL，使用双引号
 	if common.UsingPostgreSQL {
 		keyCol = `"key"`
-		groupCol = `"group"`
 		modelsCol = `"models"`
+	}
+
+	order := "priority desc"
+	if idSort {
+		order = "id desc"
 	}
 
 	// 构造基础查询
@@ -122,7 +149,7 @@ func SearchChannels(keyword string, group string, model string) ([]*Channel, err
 	}
 
 	// 执行查询
-	err := baseQuery.Where(whereClause, args...).Order("priority desc").Find(&channels).Error
+	err := baseQuery.Where(whereClause, args...).Order(order).Find(&channels).Error
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +254,7 @@ func (channel *Channel) Update() error {
 		return err
 	}
 	DB.Model(channel).First(channel, "id = ?", channel.Id)
-	err = channel.UpdateAbilities()
+	err = channel.UpdateAbilities(nil)
 	return err
 }
 
@@ -261,7 +288,25 @@ func (channel *Channel) Delete() error {
 	return err
 }
 
+var channelStatusLock sync.Mutex
+
 func UpdateChannelStatusById(id int, status int, reason string) {
+	if common.MemoryCacheEnabled {
+		channelStatusLock.Lock()
+		channelCache, _ := CacheGetChannel(id)
+		// 如果缓存渠道存在，且状态已是目标状态，直接返回
+		if channelCache != nil && channelCache.Status == status {
+			channelStatusLock.Unlock()
+			return
+		}
+		// 如果缓存渠道不存在(说明已经被禁用)，且要设置的状态不为启用，直接返回
+		if channelCache == nil && status != common.ChannelStatusEnabled {
+			channelStatusLock.Unlock()
+			return
+		}
+		CacheUpdateChannelStatus(id, status)
+		channelStatusLock.Unlock()
+	}
 	err := UpdateAbilityStatus(id, status == common.ChannelStatusEnabled)
 	if err != nil {
 		common.SysError("failed to update ability status: " + err.Error())
@@ -288,6 +333,74 @@ func UpdateChannelStatusById(id int, status int, reason string) {
 
 }
 
+func EnableChannelByTag(tag string) error {
+	err := DB.Model(&Channel{}).Where("tag = ?", tag).Update("status", common.ChannelStatusEnabled).Error
+	if err != nil {
+		return err
+	}
+	err = UpdateAbilityStatusByTag(tag, true)
+	return err
+}
+
+func DisableChannelByTag(tag string) error {
+	err := DB.Model(&Channel{}).Where("tag = ?", tag).Update("status", common.ChannelStatusManuallyDisabled).Error
+	if err != nil {
+		return err
+	}
+	err = UpdateAbilityStatusByTag(tag, false)
+	return err
+}
+
+func EditChannelByTag(tag string, newTag *string, modelMapping *string, models *string, group *string, priority *int64, weight *uint) error {
+	updateData := Channel{}
+	shouldReCreateAbilities := false
+	updatedTag := tag
+	// 如果 newTag 不为空且不等于 tag，则更新 tag
+	if newTag != nil && *newTag != tag {
+		updateData.Tag = newTag
+		updatedTag = *newTag
+	}
+	if modelMapping != nil && *modelMapping != "" {
+		updateData.ModelMapping = modelMapping
+	}
+	if models != nil && *models != "" {
+		shouldReCreateAbilities = true
+		updateData.Models = *models
+	}
+	if group != nil && *group != "" {
+		shouldReCreateAbilities = true
+		updateData.Group = *group
+	}
+	if priority != nil {
+		updateData.Priority = priority
+	}
+	if weight != nil {
+		updateData.Weight = weight
+	}
+
+	err := DB.Model(&Channel{}).Where("tag = ?", tag).Updates(updateData).Error
+	if err != nil {
+		return err
+	}
+	if shouldReCreateAbilities {
+		channels, err := GetChannelsByTag(updatedTag, false)
+		if err == nil {
+			for _, channel := range channels {
+				err = channel.UpdateAbilities(nil)
+				if err != nil {
+					common.SysError("failed to update abilities: " + err.Error())
+				}
+			}
+		}
+	} else {
+		err := UpdateAbilityByTag(tag, newTag, priority, weight)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func UpdateChannelUsedQuota(id int, quota int) {
 	if common.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeChannelUsedQuota, id, quota)
@@ -311,4 +424,120 @@ func DeleteChannelByStatus(status int64) (int64, error) {
 func DeleteDisabledChannel() (int64, error) {
 	result := DB.Where("status = ? or status = ?", common.ChannelStatusAutoDisabled, common.ChannelStatusManuallyDisabled).Delete(&Channel{})
 	return result.RowsAffected, result.Error
+}
+
+func GetPaginatedTags(offset int, limit int) ([]*string, error) {
+	var tags []*string
+	err := DB.Model(&Channel{}).Select("DISTINCT tag").Where("tag != ''").Offset(offset).Limit(limit).Find(&tags).Error
+	return tags, err
+}
+
+func SearchTags(keyword string, group string, model string, idSort bool) ([]*string, error) {
+	var tags []*string
+	modelsCol := "`models`"
+
+	// 如果是 PostgreSQL，使用双引号
+	if common.UsingPostgreSQL {
+		modelsCol = `"models"`
+	}
+
+	order := "priority desc"
+	if idSort {
+		order = "id desc"
+	}
+
+	// 构造基础查询
+	baseQuery := DB.Model(&Channel{}).Omit(keyCol)
+
+	// 构造WHERE子句
+	var whereClause string
+	var args []interface{}
+	if group != "" && group != "null" {
+		var groupCondition string
+		if common.UsingMySQL {
+			groupCondition = `CONCAT(',', ` + groupCol + `, ',') LIKE ?`
+		} else {
+			// sqlite, PostgreSQL
+			groupCondition = `(',' || ` + groupCol + ` || ',') LIKE ?`
+		}
+		whereClause = "(id = ? OR name LIKE ? OR " + keyCol + " = ?) AND " + modelsCol + ` LIKE ? AND ` + groupCondition
+		args = append(args, common.String2Int(keyword), "%"+keyword+"%", keyword, "%"+model+"%", "%,"+group+",%")
+	} else {
+		whereClause = "(id = ? OR name LIKE ? OR " + keyCol + " = ?) AND " + modelsCol + " LIKE ?"
+		args = append(args, common.String2Int(keyword), "%"+keyword+"%", keyword, "%"+model+"%")
+	}
+
+	subQuery := baseQuery.Where(whereClause, args...).
+		Select("tag").
+		Where("tag != ''").
+		Order(order)
+
+	err := DB.Table("(?) as sub", subQuery).
+		Select("DISTINCT tag").
+		Find(&tags).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+func (channel *Channel) GetSetting() map[string]interface{} {
+	setting := make(map[string]interface{})
+	if channel.Setting != "" {
+		err := json.Unmarshal([]byte(channel.Setting), &setting)
+		if err != nil {
+			common.SysError("failed to unmarshal setting: " + err.Error())
+		}
+	}
+	return setting
+}
+
+func (channel *Channel) SetSetting(setting map[string]interface{}) {
+	settingBytes, err := json.Marshal(setting)
+	if err != nil {
+		common.SysError("failed to marshal setting: " + err.Error())
+		return
+	}
+	channel.Setting = string(settingBytes)
+}
+
+func GetChannelsByIds(ids []int) ([]*Channel, error) {
+	var channels []*Channel
+	err := DB.Where("id in (?)", ids).Find(&channels).Error
+	return channels, err
+}
+
+func BatchSetChannelTag(ids []int, tag *string) error {
+	// 开启事务
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 更新标签
+	err := tx.Model(&Channel{}).Where("id in (?)", ids).Update("tag", tag).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// update ability status
+	channels, err := GetChannelsByIds(ids)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, channel := range channels {
+		err = channel.UpdateAbilities(tx)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
 }

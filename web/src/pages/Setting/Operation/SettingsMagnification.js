@@ -16,7 +16,8 @@ export default function SettingsMagnification(props) {
     ModelPrice: '',
     ModelRatio: '',
     CompletionRatio: '',
-    GroupRatio: ''
+    GroupRatio: '',
+    UserUsableGroups: ''
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
@@ -49,10 +50,17 @@ export default function SettingsMagnification(props) {
               if (res.includes(undefined))
                 return showError('部分保存失败，请重试');
             }
+            for (let i = 0; i < res.length; i++) {
+              if (!res[i].data.success) {
+                return showError(res[i].data.message)
+              }
+            }
             showSuccess('保存成功');
             props.refresh();
           })
-          .catch(() => {
+          .catch(error => {
+            console.error('Unexpected error in Promise.all:', error);
+
             showError('保存失败，请重试');
           })
           .finally(() => {
@@ -210,6 +218,33 @@ export default function SettingsMagnification(props) {
                     GroupRatio: value
                   })
                 }
+              />
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={16}>
+              <Form.TextArea
+                  label={'用户可选分组'}
+                  extraText={''}
+                  placeholder={'为一个 JSON 文本，键为分组名称，值为倍率'}
+                  field={'UserUsableGroups'}
+                  autosize={{ minRows: 6, maxRows: 12 }}
+                  trigger='blur'
+                  stopValidateWithError
+                  rules={[
+                    {
+                      validator: (rule, value) => {
+                        return verifyJSON(value);
+                      },
+                      message: '不是合法的 JSON 字符串'
+                    }
+                  ]}
+                  onChange={(value) =>
+                      setInputs({
+                        ...inputs,
+                        UserUsableGroups: value
+                      })
+                  }
               />
             </Col>
           </Row>

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bytedance/gopkg/util/gopool"
 	"io"
 	"math"
 	"net/http"
@@ -20,8 +19,11 @@ import (
 	"one-api/relay/constant"
 	"one-api/service"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/bytedance/gopkg/util/gopool"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,6 +32,9 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	tik := time.Now()
 	if channel.Type == common.ChannelTypeMidjourney {
 		return errors.New("midjourney channel test is not supported"), nil
+	}
+	if channel.Type == common.ChannelTypeMidjourneyPlus {
+		return errors.New("midjourney plus channel test is not supported!!!"), nil
 	}
 	if channel.Type == common.ChannelTypeSunoAPI {
 		return errors.New("suno channel test is not supported"), nil
@@ -82,8 +87,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 		return fmt.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
 	}
 
-	request := buildTestRequest()
-	request.Model = testModel
+	request := buildTestRequest(testModel)
 	meta.UpstreamModelName = testModel
 	common.SysLog(fmt.Sprintf("testing channel %d with model %s", channel.Id, testModel))
 
@@ -103,17 +107,22 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	if err != nil {
 		return err, nil
 	}
-	if resp != nil && resp.StatusCode != http.StatusOK {
-		err := service.RelayErrorHandler(resp)
-		return fmt.Errorf("status code %d: %s", resp.StatusCode, err.Error.Message), err
+	var httpResp *http.Response
+	if resp != nil {
+		httpResp = resp.(*http.Response)
+		if httpResp.StatusCode != http.StatusOK {
+			err := service.RelayErrorHandler(httpResp)
+			return fmt.Errorf("status code %d: %s", httpResp.StatusCode, err.Error.Message), err
+		}
 	}
-	usage, respErr := adaptor.DoResponse(c, resp, meta)
+	usageA, respErr := adaptor.DoResponse(c, httpResp, meta)
 	if respErr != nil {
 		return fmt.Errorf("%s", respErr.Error.Message), respErr
 	}
-	if usage == nil {
+	if usageA == nil {
 		return errors.New("usage is nil"), nil
 	}
+	usage := usageA.(*dto.Usage)
 	result := w.Result()
 	respBody, err := io.ReadAll(result.Body)
 	if err != nil {
@@ -138,22 +147,30 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	consumedTime := float64(milliseconds) / 1000.0
 	other := service.GenerateTextOtherInfo(c, meta, modelRatio, 1, completionRatio, modelPrice)
 	var bodyContent = string(jsonData)
-	model.RecordConsumeLog(c, 1, channel.Id, usage.PromptTokens, usage.CompletionTokens, testModel, "模型测试", quota, "模型测试", 0, quota, int(consumedTime), false, other, bodyContent)
+	model.RecordConsumeLog(c, 1, channel.Id, usage.PromptTokens, usage.CompletionTokens, testModel, "模型测试",
+		quota, "模型测试", 0, quota, int(consumedTime), false, "default", other, bodyContent)
 	common.SysLog(fmt.Sprintf("testing channel #%d, response: \n%s", channel.Id, string(respBody)))
 	return nil, nil
 }
 
-func buildTestRequest() *dto.GeneralOpenAIRequest {
+func buildTestRequest(model string) *dto.GeneralOpenAIRequest {
 	testRequest := &dto.GeneralOpenAIRequest{
-		Model:     "", // this will be set later
-		MaxTokens: 1,
-		Stream:    false,
+		Model:  "", // this will be set later
+		Stream: false,
+	}
+	if strings.HasPrefix(model, "o1") {
+		testRequest.MaxCompletionTokens = 10
+	} else if strings.HasPrefix(model, "gemini-2.0-flash-thinking") {
+		testRequest.MaxTokens = 2
+	} else {
+		testRequest.MaxTokens = 1
 	}
 	content, _ := json.Marshal("hi")
 	testMessage := dto.Message{
 		Role:    "user",
 		Content: content,
 	}
+	testRequest.Model = model
 	testRequest.Messages = append(testRequest.Messages, testMessage)
 	return testRequest
 }
@@ -228,26 +245,22 @@ func testAllChannels(notify bool) error {
 			tok := time.Now()
 			milliseconds := tok.Sub(tik).Milliseconds()
 
-			ban := false
-			if milliseconds > disableThreshold {
-				err = errors.New(fmt.Sprintf("响应时间 %.2fs 超过阈值 %.2fs", float64(milliseconds)/1000.0, float64(disableThreshold)/1000.0))
-				ban = true
-			}
+			shouldBanChannel := false
 
 			// request error disables the channel
 			if openaiWithStatusErr != nil {
 				oaiErr := openaiWithStatusErr.Error
 				err = errors.New(fmt.Sprintf("type %s, httpCode %d, code %v, message %s", oaiErr.Type, openaiWithStatusErr.StatusCode, oaiErr.Code, oaiErr.Message))
-				ban = service.ShouldDisableChannel(channel.Type, openaiWithStatusErr)
+				shouldBanChannel = service.ShouldDisableChannel(channel.Type, openaiWithStatusErr)
 			}
 
-			// parse *int to bool
-			if !channel.GetAutoBan() {
-				ban = false
+			if milliseconds > disableThreshold {
+				err = errors.New(fmt.Sprintf("响应时间 %.2fs 超过阈值 %.2fs", float64(milliseconds)/1000.0, float64(disableThreshold)/1000.0))
+				shouldBanChannel = true
 			}
 
 			// disable channel
-			if ban && isChannelEnabled {
+			if isChannelEnabled && shouldBanChannel && channel.GetAutoBan() {
 				service.DisableChannel(channel.Id, channel.Name, err.Error())
 			}
 

@@ -2,53 +2,70 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
 import { useSetTheme, useTheme } from '../context/Theme';
+import { useTranslation } from 'react-i18next';
 
-import { API, getLogo, getSystemName, showSuccess } from '../helpers';
+import { API, getLogo, getSystemName, isMobile, showSuccess } from '../helpers';
 import '../index.css';
 
 import fireworks from 'react-fireworks';
 
-import { IconHelpCircle, IconKey, IconUser } from '@douyinfe/semi-icons';
-import { Avatar, Dropdown, Layout, Nav, Switch } from '@douyinfe/semi-ui';
+import {
+  IconClose,
+  IconHelpCircle,
+  IconHome,
+  IconHomeStroked, IconIndentLeft,
+  IconComment,
+  IconKey, IconMenu,
+  IconNoteMoneyStroked,
+  IconPriceTag,
+  IconUser,
+  IconLanguage
+} from '@douyinfe/semi-icons';
+import { Avatar, Button, Dropdown, Layout, Nav, Switch } from '@douyinfe/semi-ui';
 import { stringToColor } from '../helpers/render';
-
-// HeaderBar Buttons
-let headerButtons = [
-  {
-    text: '关于',
-    itemKey: 'about',
-    to: '/about',
-    icon: <IconHelpCircle />,
-  },
-];
-
-if (localStorage.getItem('chat_link')) {
-  headerButtons.splice(1, 0, {
-    name: '聊天',
-    to: '/chat',
-    icon: 'comments',
-  });
-}
+import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import { StyleContext } from '../context/Style/index.js';
 
 const HeaderBar = () => {
+  const { t, i18n } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
+  const [styleState, styleDispatch] = useContext(StyleContext);
   let navigate = useNavigate();
+  const [currentLang, setCurrentLang] = useState(i18n.language);
 
-  const [showSidebar, setShowSidebar] = useState(false);
   const systemName = getSystemName();
   const logo = getLogo();
   const currentDate = new Date();
   // enable fireworks on new year(1.1 and 2.9-2.24)
   const isNewYear =
-    (currentDate.getMonth() === 0 && currentDate.getDate() === 1) ||
-    (currentDate.getMonth() === 1 &&
-      currentDate.getDate() >= 9 &&
-      currentDate.getDate() <= 24);
+    (currentDate.getMonth() === 0 && currentDate.getDate() === 1);
+
+  let buttons = [
+    {
+      text: t('首页'),
+      itemKey: 'home',
+      to: '/',
+    },
+    {
+      text: t('控制台'),
+      itemKey: 'detail',
+      to: '/',
+    },
+    {
+      text: t('定价'),
+      itemKey: 'pricing',
+      to: '/pricing',
+    },
+    {
+      text: t('关于'),
+      itemKey: 'about',
+      to: '/about',
+    },
+  ];
 
   async function logout() {
-    setShowSidebar(false);
     await API.get('/api/user/logout');
-    showSuccess('注销成功!');
+    showSuccess(t('注销成功!'));
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
     navigate('/login');
@@ -71,38 +88,103 @@ const HeaderBar = () => {
   useEffect(() => {
     if (theme === 'dark') {
       document.body.setAttribute('theme-mode', 'dark');
+    } else {
+      document.body.removeAttribute('theme-mode');
+    }
+    // 发送当前主题模式给子页面
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+      iframe.contentWindow.postMessage({ themeMode: theme }, '*');
     }
 
     if (isNewYear) {
       console.log('Happy New Year!');
     }
-  }, []);
+  }, [theme]);
+
+  useEffect(() => {
+    const handleLanguageChanged = (lng) => {
+      setCurrentLang(lng);
+      const iframe = document.querySelector('iframe');
+      if (iframe) {
+        iframe.contentWindow.postMessage({ lang: lng }, '*');
+      }
+    };
+
+    i18n.on('languageChanged', handleLanguageChanged);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, [i18n]);
+
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+  };
 
   return (
     <>
       <Layout>
         <div style={{ width: '100%' }}>
           <Nav
+            className={'topnav'}
             mode={'horizontal'}
-            // bodyStyle={{ height: 100 }}
             renderWrapper={({ itemElement, isSubNav, isInSubNav, props }) => {
               const routerMap = {
                 about: '/about',
                 login: '/login',
                 register: '/register',
+                pricing: '/pricing',
+                detail: '/detail',
+                home: '/',
+                chat: '/chat',
               };
               return (
-                <Link
-                  style={{ textDecoration: 'none' }}
-                  to={routerMap[props.itemKey]}
-                >
-                  {itemElement}
-                </Link>
+                <div onClick={(e) => {
+                  if (props.itemKey === 'home') {
+                    styleDispatch({ type: 'SET_INNER_PADDING', payload: false });
+                    styleDispatch({ type: 'SET_SIDER', payload: false });
+                  } else {
+                    styleDispatch({ type: 'SET_INNER_PADDING', payload: true });
+                    if (!styleState.isMobile) {
+                      styleDispatch({ type: 'SET_SIDER', payload: true });
+                    }
+                  }
+                }}>
+                  <Link
+                    className="header-bar-text"
+                    style={{ textDecoration: 'none' }}
+                    to={routerMap[props.itemKey]}
+                  >
+                    {itemElement}
+                  </Link>
+                </div>
               );
             }}
             selectedKeys={[]}
             // items={headerButtons}
             onSelect={(key) => {}}
+            header={styleState.isMobile?{
+              logo: (
+                <>
+                  {
+                    !styleState.showSider ?
+                      <Button icon={<IconMenu />} theme="light" aria-label={t('展开侧边栏')} onClick={
+                        () => styleDispatch({ type: 'SET_SIDER', payload: true })
+                      } />:
+                      <Button icon={<IconIndentLeft />} theme="light" aria-label={t('闭侧边栏')} onClick={
+                        () => styleDispatch({ type: 'SET_SIDER', payload: false })
+                      } />
+                  }
+                </>
+              ),
+            }:{
+              logo: (
+                <img src={logo} alt='logo' />
+              ),
+              text: systemName,
+            }}
+            items={buttons}
             footer={
               <>
                 {isNewYear && (
@@ -117,26 +199,52 @@ const HeaderBar = () => {
                       </Dropdown.Menu>
                     }
                   >
-                    <Nav.Item itemKey={'new-year'} text={'🏮'} />
+                    <Nav.Item itemKey={'new-year'} text={'🎉'} />
                   </Dropdown>
                 )}
-                <Nav.Item itemKey={'about'} icon={<IconHelpCircle />} />
-                <Switch
-                  checkedText='🌞'
-                  size={'large'}
-                  checked={theme === 'dark'}
-                  uncheckedText='🌙'
-                  onChange={(checked) => {
-                    setTheme(checked);
-                  }}
-                />
+                {/* <Nav.Item itemKey={'about'} icon={<IconHelpCircle />} /> */}
+                <>
+                  <Switch
+                    checkedText='🌞'
+                    size={styleState.isMobile?'default':'large'}
+                    checked={theme === 'dark'}
+                    uncheckedText='🌙'
+                    onChange={(checked) => {
+                      setTheme(checked);
+                    }}
+                  />
+                </>
+                <Dropdown
+                  position='bottomRight'
+                  render={
+                    <Dropdown.Menu>
+                      <Dropdown.Item
+                        onClick={() => handleLanguageChange('zh')}
+                        type={currentLang === 'zh' ? 'primary' : 'tertiary'}
+                      >
+                        中文
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        onClick={() => handleLanguageChange('en')}
+                        type={currentLang === 'en' ? 'primary' : 'tertiary'}
+                      >
+                        English
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  }
+                >
+                  <Nav.Item
+                    itemKey={'language'}
+                    icon={<IconLanguage />}
+                  />
+                </Dropdown>
                 {userState.user ? (
                   <>
                     <Dropdown
                       position='bottomRight'
                       render={
                         <Dropdown.Menu>
-                          <Dropdown.Item onClick={logout}>退出</Dropdown.Item>
+                          <Dropdown.Item onClick={logout}>{t('退出')}</Dropdown.Item>
                         </Dropdown.Menu>
                       }
                     >
@@ -147,21 +255,25 @@ const HeaderBar = () => {
                       >
                         {userState.user.username[0]}
                       </Avatar>
-                      <span>{userState.user.username}</span>
+                      {styleState.isMobile?null:<Text>{userState.user.username}</Text>}
                     </Dropdown>
                   </>
                 ) : (
                   <>
                     <Nav.Item
                       itemKey={'login'}
-                      text={'登录'}
-                      icon={<IconKey />}
-                    />
-                    <Nav.Item
-                      itemKey={'register'}
-                      text={'注册'}
+                      text={!styleState.isMobile?t('登录'):null}
                       icon={<IconUser />}
                     />
+                    {
+                      !styleState.isMobile && (
+                        <Nav.Item
+                          itemKey={'register'}
+                          text={t('注册')}
+                          icon={<IconKey />}
+                        />
+                      )
+                    }
                   </>
                 )}
               </>

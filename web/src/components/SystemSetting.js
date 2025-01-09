@@ -54,6 +54,9 @@ const SystemSetting = () => {
     TelegramOAuthEnabled: '',
     TelegramBotToken: '',
     TelegramBotName: '',
+    LinuxDOOAuthEnabled: '',
+    LinuxDOClientId: '',
+    LinuxDOClientSecret: '',
   });
   const [originInputs, setOriginInputs] = useState({});
   let [loading, setLoading] = useState(false);
@@ -104,6 +107,7 @@ const SystemSetting = () => {
       case 'PasswordRegisterEnabled':
       case 'EmailVerificationEnabled':
       case 'GitHubOAuthEnabled':
+      case 'LinuxDOOAuthEnabled':
       case 'WeChatAuthEnabled':
       case 'TelegramOAuthEnabled':
       case 'TurnstileCheckEnabled':
@@ -165,7 +169,9 @@ const SystemSetting = () => {
       name === 'EmailDomainWhitelist' ||
       name === 'TopupGroupRatio' ||
       name === 'TelegramBotToken' ||
-      name === 'TelegramBotName'
+      name === 'TelegramBotName' ||
+      name === 'LinuxDOClientId' ||
+      name === 'LinuxDOClientSecret'
     ) {
       setInputs((inputs) => ({ ...inputs, [name]: value }));
     } else {
@@ -184,7 +190,7 @@ const SystemSetting = () => {
     if (inputs.WorkerValidKey !== '') {
       await updateOption('WorkerValidKey', inputs.WorkerValidKey);
     }
-  }
+  };
 
   const submitPayAddress = async () => {
     if (inputs.ServerAddress === '') {
@@ -322,6 +328,18 @@ const SystemSetting = () => {
     }
   };
 
+  const submitLinuxDOOAuth = async () => {
+    if (originInputs['LinuxDOClientId'] !== inputs.LinuxDOClientId) {
+      await updateOption('LinuxDOClientId', inputs.LinuxDOClientId);
+    }
+    if (
+      originInputs['LinuxDOClientSecret'] !== inputs.LinuxDOClientSecret &&
+      inputs.LinuxDOClientSecret !== ''
+    ) {
+      await updateOption('LinuxDOClientSecret', inputs.LinuxDOClientSecret);
+    }
+  };
+
   return (
     <Grid columns={1}>
       <Grid.Column>
@@ -342,7 +360,15 @@ const SystemSetting = () => {
             更新服务器地址
           </Form.Button>
           <Header as='h3' inverted={isDark}>
-            代理设置（支持 <a href='https://github.com/Calcium-Ion/new-api-worker' target='_blank' rel='noreferrer'>new-api-worker</a>）
+            代理设置（支持{' '}
+            <a
+              href='https://github.com/Calcium-Ion/new-api-worker'
+              target='_blank'
+              rel='noreferrer'
+            >
+              new-api-worker
+            </a>
+            ）
           </Header>
           <Form.Group widths='equal'>
             <Form.Input
@@ -360,9 +386,7 @@ const SystemSetting = () => {
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Button onClick={submitWorker}>
-            更新Worker设置
-          </Form.Button>
+          <Form.Button onClick={submitWorker}>更新Worker设置</Form.Button>
           <Divider />
           <Header as='h3' inverted={isDark}>
             支付设置（当前仅支持易支付接口，默认使用上方服务器地址作为回调地址！）
@@ -483,6 +507,12 @@ const SystemSetting = () => {
               checked={inputs.GitHubOAuthEnabled === 'true'}
               label='允许通过 GitHub 账户登录 & 注册'
               name='GitHubOAuthEnabled'
+              onChange={handleInputChange}
+            />
+            <Form.Checkbox
+              checked={inputs.LinuxDOOAuthEnabled === 'true'}
+              label='允许通过 LinuxDO 账户登录 & 注册'
+              name='LinuxDOOAuthEnabled'
               onChange={handleInputChange}
             />
             <Form.Checkbox
@@ -790,6 +820,48 @@ const SystemSetting = () => {
           </Form.Group>
           <Form.Button onClick={submitTurnstile}>
             保存 Turnstile 设置
+          </Form.Button>
+          <Divider />
+          <Header as='h3' inverted={isDark}>
+            配置 LinuxDO OAuth App
+            <Header.Subheader>
+              用以支持通过 LinuxDO 进行登录注册，
+              <a
+                href='https://connect.linux.do/'
+                target='_blank'
+                rel='noreferrer'
+              >
+                点击此处
+              </a>
+              管理你的 LinuxDO OAuth App
+            </Header.Subheader>
+          </Header>
+          <Message>
+            Homepage URL 填 <code>{inputs.ServerAddress}</code>
+            ，Authorization callback URL 填{' '}
+            <code>{`${inputs.ServerAddress}/oauth/linuxdo`}</code>
+          </Message>
+          <Form.Group widths={3}>
+            <Form.Input
+              label='LinuxDO Client ID'
+              name='LinuxDOClientId'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.LinuxDOClientId}
+              placeholder='输入你注册的 LinuxDO OAuth APP 的 ID'
+            />
+            <Form.Input
+              label='LinuxDO Client Secret'
+              name='LinuxDOClientSecret'
+              onChange={handleInputChange}
+              type='password'
+              autoComplete='new-password'
+              value={inputs.LinuxDOClientSecret}
+              placeholder='敏感信息不会发送到前端显示'
+            />
+          </Form.Group>
+          <Form.Button onClick={submitLinuxDOOAuth}>
+            保存 LinuxDO OAuth 设置
           </Form.Button>
         </Form>
       </Grid.Column>

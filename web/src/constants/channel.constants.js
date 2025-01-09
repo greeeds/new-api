@@ -45,19 +45,14 @@ export const CHANNEL_OPTIONS = [
     label: 'Azure OpenAI'
   },
   {
-    key: 24,
-    text: 'Google Gemini',
-    value: 24,
-    color: 'orange',
-    label: 'Google Gemini'
-  },
-  {
     key: 34,
     text: 'Cohere',
     value: 34,
     color: 'purple',
     label: 'Cohere'
   },
+  { key: 39, text: 'Cloudflare', value: 39, color: 'grey', label: 'Cloudflare' },
+  { key: 43, text: 'DeepSeek', value: 43, color: 'blue', label: 'DeepSeek' },
   {
     key: 15,
     text: '百度文心千帆',
@@ -94,13 +89,19 @@ export const CHANNEL_OPTIONS = [
     label: '智谱 GLM-4V'
   },
   {
+    key: 24,
+    text: 'Google Gemini',
+    value: 24,
+    color: 'orange',
+    label: 'Google Gemini'
+  },
+  {
     key: 11,
     text: 'Google PaLM2',
     value: 11,
     color: 'orange',
     label: 'Google PaLM2'
   },
-  { key: 39, text: 'Cloudflare', value: 39, color: 'grey', label: 'Cloudflare' },
   { key: 25, text: 'Moonshot', value: 25, color: 'green', label: 'Moonshot' },
   { key: 19, text: '360 智脑', value: 19, color: 'blue', label: '360 智脑' },
   { key: 23, text: '腾讯混元', value: 23, color: 'teal', label: '腾讯混元' },
@@ -109,6 +110,7 @@ export const CHANNEL_OPTIONS = [
   { key: 37, text: 'Dify', value: 37, color: 'teal', label: 'Dify' },
   { key: 38, text: 'Jina', value: 38, color: 'blue', label: 'Jina' },
   { key: 40, text: 'SiliconCloud', value: 40, color: 'purple', label: 'SiliconCloud' },
+  { key: 42, text: 'Mistral AI', value: 42, color: 'blue', label: 'Mistral AI' },
   { key: 8, text: '自定义渠道', value: 8, color: 'pink', label: '自定义渠道' },
   {
     key: 22,

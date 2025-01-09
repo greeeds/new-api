@@ -10,6 +10,7 @@ import (
 	"one-api/dto"
 	relaycommon "one-api/relay/common"
 	"one-api/service"
+	"one-api/setting"
 )
 
 func getRerankPromptToken(rerankRequest dto.RerankRequest) int {
@@ -23,7 +24,7 @@ func getRerankPromptToken(rerankRequest dto.RerankRequest) int {
 	return token
 }
 
-func RerankHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
+func RerankHelper(c *gin.Context, relayMode int) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	relayInfo := relaycommon.GenRelayInfo(c)
 
 	var rerankRequest *dto.RerankRequest
@@ -57,7 +58,7 @@ func RerankHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode 
 
 	relayInfo.UpstreamModelName = rerankRequest.Model
 	modelPrice, success := common.GetModelPrice(rerankRequest.Model, false)
-	groupRatio := common.GetGroupRatio(relayInfo.Group)
+	groupRatio := setting.GetGroupRatio(relayInfo.Group)
 
 	var preConsumedQuota int
 	var ratio float64
@@ -79,6 +80,12 @@ func RerankHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode 
 	if openaiErr != nil {
 		return openaiErr
 	}
+	defer func() {
+		if openaiErr != nil {
+			returnPreConsumedQuota(c, relayInfo, userQuota, preConsumedQuota)
+		}
+	}()
+
 	adaptor := GetAdaptor(relayInfo.ApiType)
 	if adaptor == nil {
 		return service.OpenAIErrorWrapperLocal(fmt.Errorf("invalid api type: %d", relayInfo.ApiType), "invalid_api_type", http.StatusBadRequest)
@@ -99,23 +106,24 @@ func RerankHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode 
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
+
+	var httpResp *http.Response
 	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
-			returnPreConsumedQuota(c, relayInfo.TokenId, userQuota, preConsumedQuota)
-			openaiErr := service.RelayErrorHandler(resp)
+		httpResp = resp.(*http.Response)
+		if httpResp.StatusCode != http.StatusOK {
+			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 			return openaiErr
 		}
 	}
 
-	usage, openaiErr := adaptor.DoResponse(c, resp, relayInfo)
+	usage, openaiErr := adaptor.DoResponse(c, httpResp, relayInfo)
 	if openaiErr != nil {
-		returnPreConsumedQuota(c, relayInfo.TokenId, userQuota, preConsumedQuota)
 		// reset status code 重置状态码
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	postConsumeQuota(c, relayInfo, rerankRequest.Model, usage, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "", rerankRequest.Model, "")
+	postConsumeQuota(c, relayInfo, rerankRequest.Model, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "", rerankRequest.Model, "")
 	return nil
 }

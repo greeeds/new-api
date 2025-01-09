@@ -11,6 +11,7 @@ import (
 	"one-api/common"
 	"one-api/constant"
 	"one-api/dto"
+	relaycommon "one-api/relay/common"
 	"strings"
 	"unicode/utf8"
 )
@@ -18,42 +19,40 @@ import (
 // tokenEncoderMap won't grow after initialization
 var tokenEncoderMap = map[string]*tiktoken.Tiktoken{}
 var defaultTokenEncoder *tiktoken.Tiktoken
-var cl200kTokenEncoder *tiktoken.Tiktoken
+var o200kTokenEncoder *tiktoken.Tiktoken
 
 func InitTokenEncoders() {
 	common.SysLog("initializing token encoders")
-	gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
+	cl100TokenEncoder, err := tiktoken.GetEncoding(tiktoken.MODEL_CL100K_BASE)
 	if err != nil {
 		common.FatalLog(fmt.Sprintf("failed to get gpt-3.5-turbo token encoder: %s", err.Error()))
 	}
-	defaultTokenEncoder = gpt35TokenEncoder
-	gpt4TokenEncoder, err := tiktoken.EncodingForModel("gpt-4")
-	if err != nil {
-		common.FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
-	}
-	cl200kTokenEncoder, err = tiktoken.EncodingForModel("gpt-4o")
+	defaultTokenEncoder = cl100TokenEncoder
+	o200kTokenEncoder, err = tiktoken.GetEncoding(tiktoken.MODEL_O200K_BASE)
 	if err != nil {
 		common.FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
 	}
 	for model, _ := range common.GetDefaultModelRatioMap() {
 		if strings.HasPrefix(model, "gpt-3.5") {
-			tokenEncoderMap[model] = gpt35TokenEncoder
+			tokenEncoderMap[model] = cl100TokenEncoder
 		} else if strings.HasPrefix(model, "gpt-4") {
 			if strings.HasPrefix(model, "gpt-4o") {
-				tokenEncoderMap[model] = cl200kTokenEncoder
+				tokenEncoderMap[model] = o200kTokenEncoder
 			} else {
-				tokenEncoderMap[model] = gpt4TokenEncoder
+				tokenEncoderMap[model] = defaultTokenEncoder
 			}
+		} else if strings.HasPrefix(model, "o1") {
+			tokenEncoderMap[model] = o200kTokenEncoder
 		} else {
-			tokenEncoderMap[model] = nil
+			tokenEncoderMap[model] = defaultTokenEncoder
 		}
 	}
 	common.SysLog("token encoders initialized")
 }
 
 func getModelDefaultTokenEncoder(model string) *tiktoken.Tiktoken {
-	if strings.HasPrefix(model, "gpt-4o") {
-		return cl200kTokenEncoder
+	if strings.HasPrefix(model, "gpt-4o") || strings.HasPrefix(model, "chatgpt-4o") || strings.HasPrefix(model, "o1") {
+		return o200kTokenEncoder
 	}
 	return defaultTokenEncoder
 }
@@ -81,7 +80,7 @@ func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int {
 	return len(tokenEncoder.Encode(text, nil, nil))
 }
 
-func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (int, error) {
+func getImageToken(info *relaycommon.RelayInfo, imageUrl *dto.MessageImageUrl, model string, stream bool) (int, error) {
 	baseTokens := 85
 	if model == "glm-4v" {
 		return 1047, nil
@@ -91,11 +90,7 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	}
 	// TODO: 非流模式下不计算图片token数量
 	if !constant.GetMediaTokenNotStream && !stream {
-		return 1000, nil
-	}
-	// 是否统计图片token
-	if !constant.GetMediaToken {
-		return 1000, nil
+		return 256, nil
 	}
 	// 同步One API的图片计费逻辑
 	if imageUrl.Detail == "auto" || imageUrl.Detail == "" {
@@ -106,6 +101,13 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	if strings.HasPrefix(model, "gpt-4o-mini") {
 		tileTokens = 5667
 		baseTokens = 2833
+	}
+	// 是否统计图片token
+	if !constant.GetMediaToken {
+		return 3 * baseTokens, nil
+	}
+	if info.ChannelType == common.ChannelTypeGemini || info.ChannelType == common.ChannelTypeVertexAi || info.ChannelType == common.ChannelTypeAnthropic {
+		return 3 * baseTokens, nil
 	}
 	var config image.Config
 	var err error
@@ -156,9 +158,9 @@ func getImageToken(imageUrl *dto.MessageImageUrl, model string, stream bool) (in
 	return tiles*tileTokens + baseTokens, nil
 }
 
-func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string) (int, error) {
+func CountTokenChatRequest(info *relaycommon.RelayInfo, request dto.GeneralOpenAIRequest) (int, error) {
 	tkm := 0
-	msgTokens, err := CountTokenMessages(request.Messages, model, request.Stream)
+	msgTokens, err := CountTokenMessages(info, request.Messages, request.Model, request.Stream)
 	if err != nil {
 		return 0, err
 	}
@@ -180,7 +182,7 @@ func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string) (int,
 				countStr += fmt.Sprintf("%v", tool.Function.Parameters)
 			}
 		}
-		toolTokens, err := CountTokenInput(countStr, model)
+		toolTokens, err := CountTokenInput(countStr, request.Model)
 		if err != nil {
 			return 0, err
 		}
@@ -191,7 +193,73 @@ func CountTokenChatRequest(request dto.GeneralOpenAIRequest, model string) (int,
 	return tkm, nil
 }
 
-func CountTokenMessages(messages []dto.Message, model string, stream bool) (int, error) {
+func CountTokenRealtime(info *relaycommon.RelayInfo, request dto.RealtimeEvent, model string) (int, int, error) {
+	audioToken := 0
+	textToken := 0
+	switch request.Type {
+	case dto.RealtimeEventTypeSessionUpdate:
+		if request.Session != nil {
+			msgTokens, err := CountTextToken(request.Session.Instructions, model)
+			if err != nil {
+				return 0, 0, err
+			}
+			textToken += msgTokens
+		}
+	case dto.RealtimeEventResponseAudioDelta:
+		// count audio token
+		atk, err := CountAudioTokenOutput(request.Delta, info.OutputAudioFormat)
+		if err != nil {
+			return 0, 0, fmt.Errorf("error counting audio token: %v", err)
+		}
+		audioToken += atk
+	case dto.RealtimeEventResponseAudioTranscriptionDelta, dto.RealtimeEventResponseFunctionCallArgumentsDelta:
+		// count text token
+		tkm, err := CountTextToken(request.Delta, model)
+		if err != nil {
+			return 0, 0, fmt.Errorf("error counting text token: %v", err)
+		}
+		textToken += tkm
+	case dto.RealtimeEventInputAudioBufferAppend:
+		// count audio token
+		atk, err := CountAudioTokenInput(request.Audio, info.InputAudioFormat)
+		if err != nil {
+			return 0, 0, fmt.Errorf("error counting audio token: %v", err)
+		}
+		audioToken += atk
+	case dto.RealtimeEventConversationItemCreated:
+		if request.Item != nil {
+			switch request.Item.Type {
+			case "message":
+				for _, content := range request.Item.Content {
+					if content.Type == "input_text" {
+						tokens, err := CountTextToken(content.Text, model)
+						if err != nil {
+							return 0, 0, err
+						}
+						textToken += tokens
+					}
+				}
+			}
+		}
+	case dto.RealtimeEventTypeResponseDone:
+		// count tools token
+		if !info.IsFirstRequest {
+			if info.RealtimeTools != nil && len(info.RealtimeTools) > 0 {
+				for _, tool := range info.RealtimeTools {
+					toolTokens, err := CountTokenInput(tool, model)
+					if err != nil {
+						return 0, 0, err
+					}
+					textToken += 8
+					textToken += toolTokens
+				}
+			}
+		}
+	}
+	return textToken, audioToken, nil
+}
+
+func CountTokenMessages(info *relaycommon.RelayInfo, messages []dto.Message, model string, stream bool) (int, error) {
 	//recover when panic
 	tokenEncoder := getTokenEncoder(model)
 	// Reference:
@@ -223,14 +291,17 @@ func CountTokenMessages(messages []dto.Message, model string, stream bool) (int,
 			} else {
 				arrayContent := message.ParseContent()
 				for _, m := range arrayContent {
-					if m.Type == "image_url" {
+					if m.Type == dto.ContentTypeImageURL {
 						imageUrl := m.ImageUrl.(dto.MessageImageUrl)
-						imageTokenNum, err := getImageToken(&imageUrl, model, stream)
+						imageTokenNum, err := getImageToken(info, &imageUrl, model, stream)
 						if err != nil {
 							return 0, err
 						}
 						tokenNum += imageTokenNum
 						log.Printf("image token num: %d", imageTokenNum)
+					} else if m.Type == dto.ContentTypeInputAudio {
+						// TODO: 音频token数量计算
+						tokenNum += 100
 					} else {
 						tokenNum += getTokenNum(tokenEncoder, m.Text)
 					}
@@ -245,13 +316,13 @@ func CountTokenMessages(messages []dto.Message, model string, stream bool) (int,
 func CountTokenInput(input any, model string) (int, error) {
 	switch v := input.(type) {
 	case string:
-		return CountTokenText(v, model)
+		return CountTextToken(v, model)
 	case []string:
 		text := ""
 		for _, s := range v {
 			text += s
 		}
-		return CountTokenText(text, model)
+		return CountTextToken(text, model)
 	}
 	return CountTokenInput(fmt.Sprintf("%v", input), model)
 }
@@ -273,16 +344,44 @@ func CountTokenStreamChoices(messages []dto.ChatCompletionsStreamResponseChoice,
 	return tokens
 }
 
-func CountAudioToken(text string, model string) (int, error) {
+func CountTTSToken(text string, model string) (int, error) {
 	if strings.HasPrefix(model, "tts") {
 		return utf8.RuneCountInString(text), nil
 	} else {
-		return CountTokenText(text, model)
+		return CountTextToken(text, model)
 	}
 }
 
-// CountTokenText 统计文本的token数量，仅当文本包含敏感词，返回错误，同时返回token数量
-func CountTokenText(text string, model string) (int, error) {
+func CountAudioTokenInput(audioBase64 string, audioFormat string) (int, error) {
+	if audioBase64 == "" {
+		return 0, nil
+	}
+	duration, err := parseAudio(audioBase64, audioFormat)
+	if err != nil {
+		return 0, err
+	}
+	return int(duration / 60 * 100 / 0.06), nil
+}
+
+func CountAudioTokenOutput(audioBase64 string, audioFormat string) (int, error) {
+	if audioBase64 == "" {
+		return 0, nil
+	}
+	duration, err := parseAudio(audioBase64, audioFormat)
+	if err != nil {
+		return 0, err
+	}
+	return int(duration / 60 * 200 / 0.24), nil
+}
+
+//func CountAudioToken(sec float64, audioType string) {
+//	if audioType == "input" {
+//
+//	}
+//}
+
+// CountTextToken 统计文本的token数量，仅当文本包含敏感词，返回错误，同时返回token数量
+func CountTextToken(text string, model string) (int, error) {
 	var err error
 	tokenEncoder := getTokenEncoder(model)
 	return getTokenNum(tokenEncoder, text), err

@@ -4,21 +4,38 @@ import (
 	"github.com/gin-gonic/gin"
 	"one-api/common"
 	"one-api/model"
+	"one-api/setting"
 )
 
 func GetPricing(c *gin.Context) {
-	userId := c.GetInt("id")
-	// if no login, get default group ratio
-	groupRatio := common.GetGroupRatio("default")
-	group, err := model.CacheGetUserGroup(userId)
-	if err == nil {
-		groupRatio = common.GetGroupRatio(group)
+	pricing := model.GetPricing()
+	userId, exists := c.Get("id")
+	usableGroup := map[string]string{}
+	groupRatio := map[string]float64{}
+	for s, f := range setting.GetGroupRatioCopy() {
+		groupRatio[s] = f
 	}
-	pricing := model.GetPricing(group)
+	var group string
+	if exists {
+		user, err := model.GetUserById(userId.(int), false)
+		if err == nil {
+			group = user.Group
+		}
+	}
+
+	usableGroup = setting.GetUserUsableGroups(group)
+	// check groupRatio contains usableGroup
+	for group := range setting.GetGroupRatioCopy() {
+		if _, ok := usableGroup[group]; !ok {
+			delete(groupRatio, group)
+		}
+	}
+
 	c.JSON(200, gin.H{
-		"success":     true,
-		"data":        pricing,
-		"group_ratio": groupRatio,
+		"success":      true,
+		"data":         pricing,
+		"group_ratio":  groupRatio,
+		"usable_group": usableGroup,
 	})
 }
 

@@ -3,9 +3,11 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
 	"one-api/common"
-	"one-api/constant"
+	relaycommon "one-api/relay/common"
+	"one-api/setting"
 	"strconv"
 	"strings"
 )
@@ -23,8 +25,36 @@ type Token struct {
 	UnlimitedQuota     bool           `json:"unlimited_quota" gorm:"default:false"`
 	ModelLimitsEnabled bool           `json:"model_limits_enabled" gorm:"default:false"`
 	ModelLimits        string         `json:"model_limits" gorm:"type:varchar(1024);default:''"`
+	AllowIps           *string        `json:"allow_ips" gorm:"default:''"`
 	UsedQuota          int            `json:"used_quota" gorm:"default:0"` // used quota
+	Group              string         `json:"group" gorm:"default:''"`
 	DeletedAt          gorm.DeletedAt `gorm:"index"`
+}
+
+func (token *Token) Clean() {
+	token.Key = ""
+}
+
+func (token *Token) GetIpLimitsMap() map[string]any {
+	// delete empty spaces
+	//split with \n
+	ipLimitsMap := make(map[string]any)
+	if token.AllowIps == nil {
+		return ipLimitsMap
+	}
+	cleanIps := strings.ReplaceAll(*token.AllowIps, " ", "")
+	if cleanIps == "" {
+		return ipLimitsMap
+	}
+	ips := strings.Split(cleanIps, "\n")
+	for _, ip := range ips {
+		ip = strings.TrimSpace(ip)
+		ip = strings.ReplaceAll(ip, ",", "")
+		if common.IsIP(ip) {
+			ipLimitsMap[ip] = true
+		}
+	}
+	return ipLimitsMap
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int) ([]*Token, error) {
@@ -38,7 +68,7 @@ func SearchUserTokens(userId int, keyword string, token string) (tokens []*Token
 	if token != "" {
 		token = strings.Trim(token, "sk-")
 	}
-	err = DB.Where("user_id = ?", userId).Where("name LIKE ?", "%"+keyword+"%").Where("`key` LIKE ?", "%"+token+"%").Find(&tokens).Error
+	err = DB.Where("user_id = ?", userId).Where("name LIKE ?", "%"+keyword+"%").Where(keyCol+" LIKE ?", "%"+token+"%").Find(&tokens).Error
 	return tokens, err
 }
 
@@ -46,7 +76,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	if key == "" {
 		return nil, errors.New("未提供令牌")
 	}
-	token, err = CacheGetTokenByKey(key)
+	token, err = GetTokenByKey(key, false)
 	if err == nil {
 		if token.Status == common.TokenStatusExhausted {
 			keyPrefix := key[:3]
@@ -103,22 +133,38 @@ func GetTokenById(id int) (*Token, error) {
 	token := Token{Id: id}
 	var err error = nil
 	err = DB.First(&token, "id = ?", id).Error
-	if err != nil {
-		if common.RedisEnabled {
-			go cacheSetToken(&token)
-		}
+	if shouldUpdateRedis(true, err) {
+		gopool.Go(func() {
+			if err := cacheSetToken(token); err != nil {
+				common.SysError("failed to update user status cache: " + err.Error())
+			}
+		})
 	}
 	return &token, err
 }
 
-func GetTokenByKey(key string) (*Token, error) {
-	keyCol := "`key`"
-	if common.UsingPostgreSQL {
-		keyCol = `"key"`
+func GetTokenByKey(key string, fromDB bool) (token *Token, err error) {
+	defer func() {
+		// Update Redis cache asynchronously on successful DB read
+		if shouldUpdateRedis(fromDB, err) && token != nil {
+			gopool.Go(func() {
+				if err := cacheSetToken(*token); err != nil {
+					common.SysError("failed to update user status cache: " + err.Error())
+				}
+			})
+		}
+	}()
+	if !fromDB && common.RedisEnabled {
+		// Try Redis first
+		token, err := cacheGetTokenByKey(key)
+		if err == nil {
+			return token, nil
+		}
+		// Don't return error - fall through to DB
 	}
-	var token Token
-	err := DB.Where(keyCol+" = ?", key).First(&token).Error
-	return &token, err
+	fromDB = true
+	err = DB.Where(keyCol+" = ?", key).First(&token).Error
+	return token, err
 }
 
 func (token *Token) Insert() error {
@@ -128,19 +174,48 @@ func (token *Token) Insert() error {
 }
 
 // Update Make sure your token's fields is completed, because this will update non-zero values
-func (token *Token) Update() error {
-	var err error
-	err = DB.Model(token).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "model_limits_enabled", "model_limits").Updates(token).Error
+func (token *Token) Update() (err error) {
+	defer func() {
+		if shouldUpdateRedis(true, err) {
+			gopool.Go(func() {
+				err := cacheSetToken(*token)
+				if err != nil {
+					common.SysError("failed to update token cache: " + err.Error())
+				}
+			})
+		}
+	}()
+	err = DB.Model(token).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota",
+		"model_limits_enabled", "model_limits", "allow_ips", "group").Updates(token).Error
 	return err
 }
 
-func (token *Token) SelectUpdate() error {
+func (token *Token) SelectUpdate() (err error) {
+	defer func() {
+		if shouldUpdateRedis(true, err) {
+			gopool.Go(func() {
+				err := cacheSetToken(*token)
+				if err != nil {
+					common.SysError("failed to update token cache: " + err.Error())
+				}
+			})
+		}
+	}()
 	// This can update zero values
 	return DB.Model(token).Select("accessed_time", "status").Updates(token).Error
 }
 
-func (token *Token) Delete() error {
-	var err error
+func (token *Token) Delete() (err error) {
+	defer func() {
+		if shouldUpdateRedis(true, err) {
+			gopool.Go(func() {
+				err := cacheDeleteToken(token.Key)
+				if err != nil {
+					common.SysError("failed to delete token cache: " + err.Error())
+				}
+			})
+		}
+	}()
 	err = DB.Delete(token).Error
 	return err
 }
@@ -188,9 +263,17 @@ func DeleteTokenById(id int, userId int) (err error) {
 	return token.Delete()
 }
 
-func IncreaseTokenQuota(id int, quota int) (err error) {
+func IncreaseTokenQuota(id int, key string, quota int) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
+	}
+	if common.RedisEnabled {
+		gopool.Go(func() {
+			err := cacheIncrTokenQuota(key, int64(quota))
+			if err != nil {
+				common.SysError("failed to increase token quota: " + err.Error())
+			}
+		})
 	}
 	if common.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeTokenQuota, id, quota)
@@ -210,9 +293,17 @@ func increaseTokenQuota(id int, quota int) (err error) {
 	return err
 }
 
-func DecreaseTokenQuota(id int, quota int) (err error) {
+func DecreaseTokenQuota(id int, key string, quota int) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
+	}
+	if common.RedisEnabled {
+		gopool.Go(func() {
+			err := cacheDecrTokenQuota(key, int64(quota))
+			if err != nil {
+				common.SysError("failed to decrease token quota: " + err.Error())
+			}
+		})
 	}
 	if common.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeTokenQuota, id, -quota)
@@ -232,51 +323,50 @@ func decreaseTokenQuota(id int, quota int) (err error) {
 	return err
 }
 
-func PreConsumeTokenQuota(tokenId int, quota int) (userQuota int, err error) {
+func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 	if quota < 0 {
-		return 0, errors.New("quota 不能为负数！")
+		return errors.New("quota 不能为负数！")
 	}
-	token, err := GetTokenById(tokenId)
+	if relayInfo.IsPlayground {
+		return nil
+	}
+	//if relayInfo.TokenUnlimited {
+	//	return nil
+	//}
+	token, err := GetTokenById(relayInfo.TokenId)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	if !token.UnlimitedQuota && token.RemainQuota < quota {
-		return 0, errors.New("令牌额度不足")
+	if !relayInfo.TokenUnlimited && token.RemainQuota < quota {
+		return errors.New("令牌额度不足")
 	}
-	userQuota, err = GetUserQuota(token.UserId)
+	err = DecreaseTokenQuota(relayInfo.TokenId, relayInfo.TokenKey, quota)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	if userQuota < quota {
-		return 0, errors.New(fmt.Sprintf("用户额度不足，剩余额度为 %d", userQuota))
-	}
-	err = DecreaseTokenQuota(tokenId, quota)
-	if err != nil {
-		return 0, err
-	}
-	err = DecreaseUserQuota(token.UserId, quota)
-	return userQuota - quota, err
+	return nil
 }
 
-func PostConsumeTokenQuota(tokenId int, userQuota int, quota int, preConsumedQuota int, sendEmail bool) (err error) {
-	token, err := GetTokenById(tokenId)
+func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, userQuota int, quota int, preConsumedQuota int, sendEmail bool) (err error) {
 
 	if quota > 0 {
-		err = DecreaseUserQuota(token.UserId, quota)
+		err = DecreaseUserQuota(relayInfo.UserId, quota)
 	} else {
-		err = IncreaseUserQuota(token.UserId, -quota)
+		err = IncreaseUserQuota(relayInfo.UserId, -quota)
 	}
 	if err != nil {
 		return err
 	}
 
-	if quota > 0 {
-		err = DecreaseTokenQuota(tokenId, quota)
-	} else {
-		err = IncreaseTokenQuota(tokenId, -quota)
-	}
-	if err != nil {
-		return err
+	if !relayInfo.IsPlayground {
+		if quota > 0 {
+			err = DecreaseTokenQuota(relayInfo.TokenId, relayInfo.TokenKey, quota)
+		} else {
+			err = IncreaseTokenQuota(relayInfo.TokenId, relayInfo.TokenKey, -quota)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	if sendEmail {
@@ -285,7 +375,7 @@ func PostConsumeTokenQuota(tokenId int, userQuota int, quota int, preConsumedQuo
 			noMoreQuota := userQuota-(quota+preConsumedQuota) <= 0
 			if quotaTooLow || noMoreQuota {
 				go func() {
-					email, err := GetUserEmail(token.UserId)
+					email, err := GetUserEmail(relayInfo.UserId)
 					if err != nil {
 						common.SysError("failed to fetch user email: " + err.Error())
 					}
@@ -294,7 +384,7 @@ func PostConsumeTokenQuota(tokenId int, userQuota int, quota int, preConsumedQuo
 						prompt = "您的额度已用尽"
 					}
 					if email != "" {
-						topUpLink := fmt.Sprintf("%s/topup", constant.ServerAddress)
+						topUpLink := fmt.Sprintf("%s/topup", setting.ServerAddress)
 						err = common.SendEmail(prompt, email,
 							fmt.Sprintf("%s，当前剩余额度为 %d，为了不影响您的使用，请及时充值。<br/>充值链接：<a href='%s'>%s</a>", prompt, userQuota, topUpLink, topUpLink))
 						if err != nil {
