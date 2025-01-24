@@ -158,13 +158,15 @@ const LogsTable = () => {
           record.type === 0 || record.type === 2 ? (
             <div>
               {
-                <Tag
-                  color={colors[parseInt(text) % colors.length]}
-                  size='large'
-                >
-                  {' '}
-                  {text}{' '}
-                </Tag>
+                <Tooltip content={record.channel_name || '[未知]'}>
+                  <Tag
+                    color={colors[parseInt(text) % colors.length]}
+                    size='large'
+                  >
+                    {' '}
+                    {text}{' '}
+                  </Tag>
+                </Tooltip>
               }
             </div>
           ) : (
@@ -235,7 +237,12 @@ const LogsTable = () => {
               </>
             );
          } else {
-           let other = JSON.parse(record.other);
+           let other = null;
+           try {
+             other = JSON.parse(record.other);
+           } catch (e) {
+             console.error(`Failed to parse record.other: "${record.other}".`, e);
+           }
            if (other === null) {
              return <></>;
            }
@@ -555,6 +562,12 @@ const LogsTable = () => {
         //   value: content,
         // })
       }
+      if (isAdminUser && (logs[i].type === 0 || logs[i].type === 2)) {
+        expandDataLocal.push({
+          key: t('渠道信息'),
+          value: `${logs[i].channel} - ${logs[i].channel_name || '[未知]'}`
+        });
+      }
       if (other?.ws || other?.audio) {
         expandDataLocal.push({
           key: t('语音输入'),
@@ -617,7 +630,6 @@ const LogsTable = () => {
     }
 
     setExpandData(expandDatesLocal);
-
     setLogs(logs);
   };
 
