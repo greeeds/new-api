@@ -145,6 +145,13 @@ func main() {
 	middleware.SetUpLogger(server)
 	// Initialize session store
 	store := cookie.NewStore([]byte(common.SessionSecret))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   2592000, // 30 days
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+	})
 	server.Use(sessions.Sessions("session", store))
 
 	router.SetRouter(server, buildFS, indexPage)
