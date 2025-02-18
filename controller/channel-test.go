@@ -113,6 +113,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	if err != nil {
 		return err, nil
 	}
+	var bodyContent = string(jsonData)
 	requestBody := bytes.NewBuffer(jsonData)
 	c.Request.Body = io.NopCloser(requestBody)
 	resp, err := adaptor.DoRequest(c, meta, requestBody)
@@ -123,7 +124,12 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		if httpResp.StatusCode != http.StatusOK {
+			tok := time.Now()
+			milliseconds := tok.Sub(tik).Milliseconds()
+			consumedTime := float64(milliseconds) / 1000.0
 			err := service.RelayErrorHandler(httpResp)
+			model.RecordConsumeLog(c, 1, channel.Id, 0, 0, testModel, "模型测试",
+				0, "模型测试", 0, 0, int(consumedTime), false, "default", make(map[string]interface{}), bodyContent)
 			return fmt.Errorf("status code %d: %s", httpResp.StatusCode, err.Error.Message), err
 		}
 	}
@@ -158,7 +164,6 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	milliseconds := tok.Sub(tik).Milliseconds()
 	consumedTime := float64(milliseconds) / 1000.0
 	other := service.GenerateTextOtherInfo(c, meta, modelRatio, 1, completionRatio, modelPrice)
-	var bodyContent = string(jsonData)
 	model.RecordConsumeLog(c, 1, channel.Id, usage.PromptTokens, usage.CompletionTokens, testModel, "模型测试",
 		quota, "模型测试", 0, quota, int(consumedTime), false, "default", other, bodyContent)
 	common.SysLog(fmt.Sprintf("testing channel #%d, response: \n%s", channel.Id, string(respBody)))

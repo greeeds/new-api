@@ -201,7 +201,12 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(textRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		relayInfo.IsStream = relayInfo.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
@@ -209,6 +214,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			postConsumeQuota(c, relayInfo, relayInfo.RecodeModelName, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "", textRequest.SourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -218,12 +224,6 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		// reset status code 重置状态码
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
-	}
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err = json.Marshal(textRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
 	}
 	if strings.HasPrefix(relayInfo.RecodeModelName, "gpt-4o-audio") {
 		service.PostAudioConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "")
