@@ -57,6 +57,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 			return service.OpenAIErrorWrapperLocal(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[embeddingRequest.Model] != "" {
+			embeddingRequest.SourceModel = embeddingRequest.Model
 			embeddingRequest.Model = modelMap[embeddingRequest.Model]
 			// set upstream model name
 			//isModelMapped = true
@@ -132,6 +133,12 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	postConsumeQuota(c, relayInfo, embeddingRequest.Model, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "")
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(embeddingRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
+	postConsumeQuota(c, relayInfo, embeddingRequest.Model, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "", embeddingRequest.SourceModel, bodyContent)
 	return nil
 }

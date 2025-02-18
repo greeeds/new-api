@@ -12,6 +12,7 @@ type EmbeddingOptions struct {
 }
 
 type EmbeddingRequest struct {
+	SourceModel      string   `json:"source_model,omitempty"`
 	Model            string   `json:"model"`
 	Input            any      `json:"input"`
 	EncodingFormat   string   `json:"encoding_format,omitempty"`
