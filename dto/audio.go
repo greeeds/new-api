@@ -1,7 +1,6 @@
 package dto
 
 type AudioRequest struct {
-	SourceModel    string  `json:"source_model,omitempty"`
 	Model          string  `json:"model"`
 	Input          string  `json:"input"`
 	Voice          string  `json:"voice"`

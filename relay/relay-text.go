@@ -78,6 +78,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	// map model name
 	//isModelMapped := false
 	modelMapping := c.GetString("model_mapping")
+	sourceModel := ""
 	//isModelMapped := false
 	if modelMapping != "" && modelMapping != "{}" {
 		modelMap := make(map[string]string)
@@ -86,7 +87,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			return service.OpenAIErrorWrapperLocal(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[textRequest.Model] != "" {
-			textRequest.SourceModel = textRequest.Model
+			sourceModel = textRequest.Model
 			//isModelMapped = true
 			textRequest.Model = modelMap[textRequest.Model]
 			// set upstream model name
@@ -214,7 +215,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, relayInfo.RecodeModelName, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "", textRequest.SourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, relayInfo.RecodeModelName, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -228,7 +229,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	if strings.HasPrefix(relayInfo.RecodeModelName, "gpt-4o-audio") {
 		service.PostAudioConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "")
 	} else {
-		postConsumeQuota(c, relayInfo, relayInfo.RecodeModelName, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "", textRequest.SourceModel, bodyContent)
+		postConsumeQuota(c, relayInfo, relayInfo.RecodeModelName, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, getModelPriceSuccess, "", sourceModel, bodyContent)
 	}
 	return nil
 }

@@ -79,6 +79,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 
 	// map model name
 	modelMapping := c.GetString("model_mapping")
+	sourceModel := ""
 	if modelMapping != "" {
 		modelMap := make(map[string]string)
 		err := json.Unmarshal([]byte(modelMapping), &modelMap)
@@ -86,7 +87,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 			return service.OpenAIErrorWrapper(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[imageRequest.Model] != "" {
-			imageRequest.SourceModel = imageRequest.Model
+			sourceModel = imageRequest.Model
 			imageRequest.Model = modelMap[imageRequest.Model]
 		}
 	}
@@ -155,6 +156,12 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(imageRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
@@ -163,6 +170,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 			openaiErr := service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			postConsumeQuota(c, relayInfo, imageRequest.Model, nil, 0, 0, userQuota, 0, groupRatio, imageRatio, true, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -185,13 +193,7 @@ func ImageHelper(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	logContent := fmt.Sprintf("大小 %s, 品质 %s", imageRequest.Size, quality)
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err = json.Marshal(imageRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
-	}
-	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, imageRatio, true, logContent, imageRequest.SourceModel, bodyContent)
+	postConsumeQuota(c, relayInfo, imageRequest.Model, usage, 0, 0, userQuota, 0, groupRatio, imageRatio, true, logContent, sourceModel, bodyContent)
 
 	return nil
 }

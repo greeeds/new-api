@@ -129,7 +129,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 			consumedTime := float64(milliseconds) / 1000.0
 			err := service.RelayErrorHandler(httpResp)
 			model.RecordConsumeLog(c, 1, channel.Id, 0, 0, testModel, "模型测试",
-				0, "模型测试", 0, 0, int(consumedTime), false, "default", make(map[string]interface{}), bodyContent)
+				0, "模型测试:"+err.Error.Message, 0, 0, int(consumedTime), false, "default", make(map[string]interface{}), bodyContent)
 			return fmt.Errorf("status code %d: %s", httpResp.StatusCode, err.Error.Message), err
 		}
 	}

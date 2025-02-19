@@ -49,6 +49,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 
 	// map model name
 	modelMapping := c.GetString("model_mapping")
+	sourceModel := ""
 	//isModelMapped := false
 	if modelMapping != "" && modelMapping != "{}" {
 		modelMap := make(map[string]string)
@@ -57,7 +58,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 			return service.OpenAIErrorWrapperLocal(err, "unmarshal_model_mapping_failed", http.StatusInternalServerError)
 		}
 		if modelMap[embeddingRequest.Model] != "" {
-			embeddingRequest.SourceModel = embeddingRequest.Model
+			sourceModel = embeddingRequest.Model
 			embeddingRequest.Model = modelMap[embeddingRequest.Model]
 			// set upstream model name
 			//isModelMapped = true
@@ -116,6 +117,12 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
 
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(embeddingRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
@@ -123,6 +130,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			postConsumeQuota(c, relayInfo, embeddingRequest.Model, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -133,12 +141,6 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err = json.Marshal(embeddingRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
-	}
-	postConsumeQuota(c, relayInfo, embeddingRequest.Model, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "", embeddingRequest.SourceModel, bodyContent)
+	postConsumeQuota(c, relayInfo, embeddingRequest.Model, usage.(*dto.Usage), ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, "", sourceModel, bodyContent)
 	return nil
 }
