@@ -1,6 +1,9 @@
 package dto
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type ResponseFormat struct {
 	Type       string            `json:"type,omitempty"`
@@ -18,6 +21,7 @@ type GeneralOpenAIRequest struct {
 	Model               string          `json:"model,omitempty"`
 	Messages            []Message       `json:"messages,omitempty"`
 	Prompt              any             `json:"prompt,omitempty"`
+	Prefix              any             `json:"prefix,omitempty"`
 	Suffix              any             `json:"suffix,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`
 	StreamOptions       *StreamOptions  `json:"stream_options,omitempty"`
@@ -46,6 +50,7 @@ type GeneralOpenAIRequest struct {
 	Dimensions          int             `json:"dimensions,omitempty"`
 	Modalities          any             `json:"modalities,omitempty"`
 	Audio               any             `json:"audio,omitempty"`
+	ExtraBody           any             `json:"extra_body,omitempty"`
 }
 
 type OpenAITools struct {
@@ -87,18 +92,20 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 }
 
 type Message struct {
-	Role             string          `json:"role"`
-	Content          json.RawMessage `json:"content"`
-	Name             *string         `json:"name,omitempty"`
-	Prefix           *bool           `json:"prefix,omitempty"`
-	ReasoningContent string          `json:"reasoning_content,omitempty"`
-	ToolCalls        json.RawMessage `json:"tool_calls,omitempty"`
-	ToolCallId       string          `json:"tool_call_id,omitempty"`
+	Role                string          `json:"role"`
+	Content             json.RawMessage `json:"content"`
+	Name                *string         `json:"name,omitempty"`
+	Prefix              *bool           `json:"prefix,omitempty"`
+	ReasoningContent    string          `json:"reasoning_content,omitempty"`
+	ToolCalls           json.RawMessage `json:"tool_calls,omitempty"`
+	ToolCallId          string          `json:"tool_call_id,omitempty"`
+	parsedContent       []MediaContent
+	parsedStringContent *string
 }
 
 type MediaContent struct {
 	Type       string `json:"type"`
-	Text       string `json:"text"`
+	Text       string `json:"text,omitempty"`
 	ImageUrl   any    `json:"image_url,omitempty"`
 	InputAudio any    `json:"input_audio,omitempty"`
 }
@@ -147,88 +154,139 @@ func (m *Message) SetToolCalls(toolCalls any) {
 }
 
 func (m *Message) StringContent() string {
+	if m.parsedStringContent != nil {
+		return *m.parsedStringContent
+	}
+
 	var stringContent string
 	if err := json.Unmarshal(m.Content, &stringContent); err == nil {
+		m.parsedStringContent = &stringContent
 		return stringContent
 	}
-	return string(m.Content)
+
+	contentStr := new(strings.Builder)
+	arrayContent := m.ParseContent()
+	for _, content := range arrayContent {
+		if content.Type == ContentTypeText {
+			contentStr.WriteString(content.Text)
+		}
+	}
+	stringContent = contentStr.String()
+	m.parsedStringContent = &stringContent
+
+	return stringContent
 }
 
 func (m *Message) SetStringContent(content string) {
 	jsonContent, _ := json.Marshal(content)
 	m.Content = jsonContent
+	m.parsedStringContent = &content
+	m.parsedContent = nil
+}
+
+func (m *Message) SetMediaContent(content []MediaContent) {
+	jsonContent, _ := json.Marshal(content)
+	m.Content = jsonContent
+	m.parsedContent = nil
+	m.parsedStringContent = nil
 }
 
 func (m *Message) IsStringContent() bool {
+	if m.parsedStringContent != nil {
+		return true
+	}
 	var stringContent string
 	if err := json.Unmarshal(m.Content, &stringContent); err == nil {
+		m.parsedStringContent = &stringContent
 		return true
 	}
 	return false
 }
 
 func (m *Message) ParseContent() []MediaContent {
+	if m.parsedContent != nil {
+		return m.parsedContent
+	}
+
 	var contentList []MediaContent
+
+	// 先尝试解析为字符串
 	var stringContent string
 	if err := json.Unmarshal(m.Content, &stringContent); err == nil {
-		contentList = append(contentList, MediaContent{
+		contentList = []MediaContent{{
 			Type: ContentTypeText,
 			Text: stringContent,
-		})
+		}}
+		m.parsedContent = contentList
 		return contentList
 	}
-	var arrayContent []json.RawMessage
+
+	// 尝试解析为数组
+	var arrayContent []map[string]interface{}
 	if err := json.Unmarshal(m.Content, &arrayContent); err == nil {
 		for _, contentItem := range arrayContent {
-			var contentMap map[string]any
-			if err := json.Unmarshal(contentItem, &contentMap); err != nil {
+			contentType, ok := contentItem["type"].(string)
+			if !ok {
 				continue
 			}
-			switch contentMap["type"] {
+
+			switch contentType {
 			case ContentTypeText:
-				if subStr, ok := contentMap["text"].(string); ok {
+				if text, ok := contentItem["text"].(string); ok {
 					contentList = append(contentList, MediaContent{
 						Type: ContentTypeText,
-						Text: subStr,
+						Text: text,
 					})
 				}
+
 			case ContentTypeImageURL:
-				if subObj, ok := contentMap["image_url"].(map[string]any); ok {
-					detail, ok := subObj["detail"]
-					if ok {
-						subObj["detail"] = detail.(string)
-					} else {
-						subObj["detail"] = "high"
-					}
+				imageUrl := contentItem["image_url"]
+				switch v := imageUrl.(type) {
+				case string:
 					contentList = append(contentList, MediaContent{
 						Type: ContentTypeImageURL,
 						ImageUrl: MessageImageUrl{
-							Url:    subObj["url"].(string),
-							Detail: subObj["detail"].(string),
-						},
-					})
-				} else if url, ok := contentMap["image_url"].(string); ok {
-					contentList = append(contentList, MediaContent{
-						Type: ContentTypeImageURL,
-						ImageUrl: MessageImageUrl{
-							Url:    url,
+							Url:    v,
 							Detail: "high",
 						},
 					})
+				case map[string]interface{}:
+					url, ok1 := v["url"].(string)
+					detail, ok2 := v["detail"].(string)
+					if !ok2 {
+						detail = "high"
+					}
+					if ok1 {
+						contentList = append(contentList, MediaContent{
+							Type: ContentTypeImageURL,
+							ImageUrl: MessageImageUrl{
+								Url:    url,
+								Detail: detail,
+							},
+						})
+					}
 				}
+
 			case ContentTypeInputAudio:
-				if subObj, ok := contentMap["input_audio"].(map[string]any); ok {
-					contentList = append(contentList, MediaContent{
-						Type: ContentTypeInputAudio,
-						InputAudio: MessageInputAudio{
-							Data:   subObj["data"].(string),
-							Format: subObj["format"].(string),
-						},
-					})
+				if audioData, ok := contentItem["input_audio"].(map[string]interface{}); ok {
+					data, ok1 := audioData["data"].(string)
+					format, ok2 := audioData["format"].(string)
+					if ok1 && ok2 {
+						contentList = append(contentList, MediaContent{
+							Type: ContentTypeInputAudio,
+							InputAudio: MessageInputAudio{
+								Data:   data,
+								Format: format,
+							},
+						})
+					}
 				}
 			}
 		}
-		return contentList
 	}
-	return nil
+
+	if len(contentList) > 0 {
+		m.parsedContent = contentList
+	}
+	return contentList
 }

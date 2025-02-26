@@ -13,24 +13,25 @@ import (
 )
 
 type RelayInfo struct {
-	ChannelType          int
-	ChannelId            int
-	TokenId              int
-	TokenKey             string
-	UserId               int
-	Group                string
-	TokenUnlimited       bool
-	StartTime            time.Time
-	FirstResponseTime    time.Time
-	setFirstResponse     bool
-	ApiType              int
-	IsStream             bool
-	IsPlayground         bool
-	UsePrice             bool
-	RelayMode            int
-	UpstreamModelName    string
-	OriginModelName      string
-	RecodeModelName      string
+	ChannelType               int
+	ChannelId                 int
+	TokenId                   int
+	TokenKey                  string
+	UserId                    int
+	Group                     string
+	TokenUnlimited            bool
+	StartTime                 time.Time
+	FirstResponseTime         time.Time
+	IsFirstResponse           bool
+	SendLastReasoningResponse bool
+	ApiType                   int
+	IsStream                  bool
+	IsPlayground              bool
+	UsePrice                  bool
+	RelayMode                 int
+	UpstreamModelName         string
+	OriginModelName           string
+	//RecodeModelName      string
 	RequestURLPath       string
 	ApiVersion           string
 	PromptTokens         int
@@ -39,6 +40,7 @@ type RelayInfo struct {
 	BaseUrl              string
 	SupportStreamOptions bool
 	ShouldIncludeUsage   bool
+	IsModelMapped        bool
 	ClientWs             *websocket.Conn
 	TargetWs             *websocket.Conn
 	InputAudioFormat     string
@@ -48,6 +50,21 @@ type RelayInfo struct {
 	AudioUsage           bool
 	ReasoningEffort      string
 	ChannelSetting       map[string]interface{}
+	UserSetting          map[string]interface{}
+	UserEmail            string
+	UserQuota            int
+}
+
+// 定义支持流式选项的通道类型
+var streamSupportedChannels = map[int]bool{
+	common.ChannelTypeOpenAI:     true,
+	common.ChannelTypeAnthropic:  true,
+	common.ChannelTypeAws:        true,
+	common.ChannelTypeGemini:     true,
+	common.ChannelCloudflare:     true,
+	common.ChannelTypeAzure:      true,
+	common.ChannelTypeVolcEngine: true,
+	common.ChannelTypeOllama:     true,
 }
 
 func GenRelayInfoWs(c *gin.Context, ws *websocket.Conn) *RelayInfo {
@@ -75,6 +92,10 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 	apiType, _ := relayconstant.ChannelType2APIType(channelType)
 
 	info := &RelayInfo{
+		UserQuota:         c.GetInt(constant.ContextKeyUserQuota),
+		UserSetting:       c.GetStringMap(constant.ContextKeyUserSetting),
+		UserEmail:         c.GetString(constant.ContextKeyUserEmail),
+		IsFirstResponse:   true,
 		RelayMode:         relayconstant.Path2RelayMode(c.Request.URL.Path),
 		BaseUrl:           c.GetString("base_url"),
 		RequestURLPath:    c.Request.URL.String(),
@@ -89,12 +110,13 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 		FirstResponseTime: startTime.Add(-time.Second),
 		OriginModelName:   c.GetString("original_model"),
 		UpstreamModelName: c.GetString("original_model"),
-		RecodeModelName:   c.GetString("recode_model"),
-		ApiType:           apiType,
-		ApiVersion:        c.GetString("api_version"),
-		ApiKey:            strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
-		Organization:      c.GetString("channel_organization"),
-		ChannelSetting:    channelSetting,
+		//RecodeModelName:   c.GetString("original_model"),
+		IsModelMapped:  false,
+		ApiType:        apiType,
+		ApiVersion:     c.GetString("api_version"),
+		ApiKey:         strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
+		Organization:   c.GetString("channel_organization"),
+		ChannelSetting: channelSetting,
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/pg") {
 		info.IsPlayground = true
@@ -110,10 +132,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 	if info.ChannelType == common.ChannelTypeVertexAi {
 		info.ApiVersion = c.GetString("region")
 	}
-	if info.ChannelType == common.ChannelTypeOpenAI || info.ChannelType == common.ChannelTypeAnthropic ||
-		info.ChannelType == common.ChannelTypeAws || info.ChannelType == common.ChannelTypeGemini ||
-		info.ChannelType == common.ChannelCloudflare || info.ChannelType == common.ChannelTypeAzure ||
-	        info.ChannelType == common.ChannelTypeVolcEngine {
+	if streamSupportedChannels[info.ChannelType] {
 		info.SupportStreamOptions = true
 	}
 	return info
@@ -128,26 +147,14 @@ func (info *RelayInfo) SetIsStream(isStream bool) {
 }
 
 func (info *RelayInfo) SetFirstResponseTime() {
-	if !info.setFirstResponse {
+	if info.IsFirstResponse {
 		info.FirstResponseTime = time.Now()
-		info.setFirstResponse = true
+		info.IsFirstResponse = false
 	}
 }
 
 type TaskRelayInfo struct {
-	ChannelType       int
-	ChannelId         int
-	TokenId           int
-	UserId            int
-	Group             string
-	StartTime         time.Time
-	ApiType           int
-	RelayMode         int
-	UpstreamModelName string
-	RequestURLPath    string
-	ApiKey            string
-	BaseUrl           string
-
+	*RelayInfo
 	Action       string
 	OriginTaskID string
 
@@ -155,48 +162,8 @@ type TaskRelayInfo struct {
 }
 
 func GenTaskRelayInfo(c *gin.Context) *TaskRelayInfo {
-	channelType := c.GetInt("channel_type")
-	channelId := c.GetInt("channel_id")
-
-	tokenId := c.GetInt("token_id")
-	userId := c.GetInt("id")
-	group := c.GetString("group")
-	startTime := time.Now()
-
-	apiType, _ := relayconstant.ChannelType2APIType(channelType)
-
 	info := &TaskRelayInfo{
-		RelayMode:      relayconstant.Path2RelayMode(c.Request.URL.Path),
-		BaseUrl:        c.GetString("base_url"),
-		RequestURLPath: c.Request.URL.String(),
-		ChannelType:    channelType,
-		ChannelId:      channelId,
-		TokenId:        tokenId,
-		UserId:         userId,
-		Group:          group,
-		StartTime:      startTime,
-		ApiType:        apiType,
-		ApiKey:         strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
-	}
-	if info.BaseUrl == "" {
-		info.BaseUrl = common.ChannelBaseURLs[channelType]
+		RelayInfo: GenRelayInfo(c),
 	}
 	return info
-}
-
-func (info *TaskRelayInfo) ToRelayInfo() *RelayInfo {
-	return &RelayInfo{
-		ChannelType:       info.ChannelType,
-		ChannelId:         info.ChannelId,
-		TokenId:           info.TokenId,
-		UserId:            info.UserId,
-		Group:             info.Group,
-		StartTime:         info.StartTime,
-		ApiType:           info.ApiType,
-		RelayMode:         info.RelayMode,
-		UpstreamModelName: info.UpstreamModelName,
-		RequestURLPath:    info.RequestURLPath,
-		ApiKey:            info.ApiKey,
-		BaseUrl:           info.BaseUrl,
-	}
 }

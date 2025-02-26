@@ -16,7 +16,7 @@ import {
   Button, Descriptions,
   Form,
   Layout,
-  Modal,
+  Modal, Popover,
   Select,
   Space,
   Spin,
@@ -35,6 +35,7 @@ import {
 import Paragraph from '@douyinfe/semi-ui/lib/es/typography/paragraph';
 import { getLogOther } from '../helpers/other.js';
 import { StyleContext } from '../context/Style/index.js';
+import { IconInherit, IconRefresh } from '@douyinfe/semi-icons';
 
 const { Header } = Layout;
 
@@ -142,6 +143,77 @@ const LogsTable = () => {
         </Tag>
       );
     }
+  }
+
+  function renderModelName(record) {
+
+    let other = getLogOther(record.other);
+    let modelMapped = other?.is_model_mapped && other?.upstream_model_name && other?.upstream_model_name !== '';
+    if (!modelMapped) {
+      return <Tag
+        color={stringToColor(record.model_name)}
+        size='large'
+        onClick={(event) => {
+          copyText(event, record.model_name).then(r => {});
+        }}
+      >
+        {' '}{record.model_name}{' '}
+      </Tag>;
+    } else {
+      return (
+        <>
+          <Space vertical align={'start'}>
+            <Popover content={
+              <div style={{padding: 10}}>
+                <Space vertical align={'start'}>
+                  <Tag
+                    color={stringToColor(record.model_name)}
+                    size='large'
+                    onClick={(event) => {
+                      copyText(event, record.model_name).then(r => {});
+                    }}
+                  >
+                    {t('请求并计费模型')}{' '}{record.model_name}{' '}
+                  </Tag>
+                  <Tag
+                    color={stringToColor(other.upstream_model_name)}
+                    size='large'
+                    onClick={(event) => {
+                      copyText(event, other.upstream_model_name).then(r => {});
+                    }}
+                  >
+                    {t('实际模型')}{' '}{other.upstream_model_name}{' '}
+                  </Tag>
+                </Space>
+              </div>
+            }>
+              <Tag
+                color={stringToColor(record.model_name)}
+                size='large'
+                onClick={(event) => {
+                  copyText(event, record.model_name).then(r => {});
+                }}
+                suffixIcon={<IconRefresh style={{width: '0.8em', height: '0.8em', opacity: 0.6}} />}
+              >
+                {' '}{record.model_name}{' '}
+              </Tag>
+            </Popover>
+            {/*<Tooltip content={t('实际模型')}>*/}
+            {/*  <Tag*/}
+            {/*    color={stringToColor(other.upstream_model_name)}*/}
+            {/*    size='large'*/}
+            {/*    onClick={(event) => {*/}
+            {/*      copyText(event, other.upstream_model_name).then(r => {});*/}
+            {/*    }}*/}
+            {/*  >*/}
+            {/*    {' '}{other.upstream_model_name}{' '}*/}
+            {/*  </Tag>*/}
+            {/*</Tooltip>*/}
+          </Space>
+        </>
+      );
+    }
+
   }
 
   const columns = [
@@ -273,18 +345,7 @@ const LogsTable = () => {
       dataIndex: 'model_name',
       render: (text, record, index) => {
         return record.type === 0 || record.type === 2 ? (
-          <>
-            <Tag
-              color={stringToColor(text)}
-              size='large'
-              onClick={(event) => {
-                copyText(event, text);
-              }}
-            >
-              {' '}
-              {text}{' '}
-            </Tag>
-          </>
+          <>{renderModelName(record)}</>
         ) : (
           <></>
         );
@@ -591,6 +652,17 @@ const LogsTable = () => {
         value: logs[i].content,
       });
       if (logs[i].type === 2) {
+        let modelMapped = other?.is_model_mapped && other?.upstream_model_name && other?.upstream_model_name !== '';
+        if (modelMapped) {
+          expandDataLocal.push({
+            key: t('请求并计费模型'),
+            value: logs[i].model_name,
+          });
+          expandDataLocal.push({
+            key: t('实际模型'),
+            value: other.upstream_model_name,
+          });
+        }
         let content = '';
         if (other?.ws || other?.audio) {
           content = renderAudioModelPrice(
