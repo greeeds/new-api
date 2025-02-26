@@ -96,8 +96,8 @@ func AudioHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		return service.OpenAIErrorWrapperLocal(err, "model_mapped_error", http.StatusInternalServerError)
 	}
 
-	sourceModel := audioRequest.Model
 	audioRequest.Model = relayInfo.UpstreamModelName
+	sourceModel := relayInfo.OriginModelName
 
 	adaptor := GetAdaptor(relayInfo.ApiType)
 	if adaptor == nil {
@@ -123,7 +123,7 @@ func AudioHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, audioRequest.Model, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, 0, false, openaiErr.Error.Message, sourceModel, "")
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, openaiErr.Error.Message, sourceModel, "")
 			return openaiErr
 		}
 	}
@@ -135,7 +135,7 @@ func AudioHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		return openaiErr
 	}
 
-	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
+	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "", sourceModel, "")
 
 	return nil
 }

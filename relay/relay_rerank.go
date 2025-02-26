@@ -46,6 +46,7 @@ func RerankHelper(c *gin.Context, relayMode int) (openaiErr *dto.OpenAIErrorWith
 	}
 
 	rerankRequest.Model = relayInfo.UpstreamModelName
+	sourceModel := relayInfo.OriginModelName
 
 	promptToken := getRerankPromptToken(*rerankRequest)
 	relayInfo.PromptTokens = promptToken
@@ -84,6 +85,12 @@ func RerankHelper(c *gin.Context, relayMode int) (openaiErr *dto.OpenAIErrorWith
 		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
 
+	var bodyContent string
+	bodyContent = ""
+	jsonData, err = json.Marshal(rerankRequest)
+	if err == nil {
+		bodyContent = string(jsonData)
+	}
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
@@ -91,6 +98,7 @@ func RerankHelper(c *gin.Context, relayMode int) (openaiErr *dto.OpenAIErrorWith
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -101,6 +109,6 @@ func RerankHelper(c *gin.Context, relayMode int) (openaiErr *dto.OpenAIErrorWith
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
+	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "", sourceModel, bodyContent)
 	return nil
 }

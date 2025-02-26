@@ -53,6 +53,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 	}
 
 	embeddingRequest.Model = relayInfo.UpstreamModelName
+	sourceModel := relayInfo.OriginModelName
 
 	promptToken := getEmbeddingPromptToken(*embeddingRequest)
 	relayInfo.PromptTokens = promptToken
@@ -105,7 +106,7 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 			openaiErr = service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, embeddingRequest.Model, nil, ratio, preConsumedQuota, userQuota, modelRatio, groupRatio, modelPrice, success, openaiErr.Error.Message, sourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -116,6 +117,6 @@ func EmbeddingHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return openaiErr
 	}
-	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
+	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "", sourceModel, bodyContent)
 	return nil
 }

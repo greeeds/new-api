@@ -85,6 +85,7 @@ func ImageHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	imageRequest.Model = relayInfo.UpstreamModelName
+	sourceModel := relayInfo.OriginModelName
 
 	priceData := helper.ModelPriceHelper(c, relayInfo, 0, 0)
 	if !priceData.UsePrice {
@@ -161,7 +162,7 @@ func ImageHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 			openaiErr := service.RelayErrorHandler(httpResp)
 			// reset status code 重置状态码
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, imageRequest.Model, nil, 0, 0, userQuota, 0, groupRatio, imageRatio, true, openaiErr.Error.Message, sourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, nil, 0, userQuota, priceData, openaiErr.Error.Message, sourceModel, bodyContent)
 			return openaiErr
 		}
 	}
@@ -184,6 +185,6 @@ func ImageHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	}
 
 	logContent := fmt.Sprintf("大小 %s, 品质 %s", imageRequest.Size, quality)
-	postConsumeQuota(c, relayInfo, usage, 0, userQuota, priceData, logContent)
+	postConsumeQuota(c, relayInfo, usage, 0, userQuota, priceData, logContent, sourceModel, bodyContent)
 	return nil
 }
