@@ -14,7 +14,7 @@ import (
 )
 
 func GetGreedRandomImageUrlByNum(c *gin.Context) {
-	greedImage, err := GetImage(c)
+	greedImage, err := GreedGetImage(c)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -54,7 +54,7 @@ func GetGreedRandomImageUrlByNum(c *gin.Context) {
 }
 
 func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
-	greedImage, err := GetImage(c)
+	greedImage, err := GreedGetImage(c)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -67,7 +67,7 @@ func GetGreedRandomImageUrlByNumRedirect(c *gin.Context) {
 }
 
 func GetGreedRandomImageUrlText(c *gin.Context) {
-	greedImage, err := GetImage(c)
+	greedImage, err := GreedGetImage(c)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -141,7 +141,7 @@ func GetTotal(c *gin.Context) {
 	return
 }
 
-func GetImage(c *gin.Context) (*model.GreedImage, error) {
+func GreedGetImage(c *gin.Context) (*model.GreedImage, error) {
 	num, _ := strconv.Atoi(c.Query("num"))
 	if num < 0 {
 		num = 0

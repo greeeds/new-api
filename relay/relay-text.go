@@ -153,12 +153,13 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	}
 	adaptor.Init(relayInfo)
 	var requestBody io.Reader
-
+	var bodyContent = ""
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
 			return service.OpenAIErrorWrapperLocal(err, "get_request_body_failed", http.StatusInternalServerError)
 		}
+		bodyContent = string(body)
 		requestBody = bytes.NewBuffer(body)
 	} else {
 		convertedRequest, err := adaptor.ConvertOpenAIRequest(c, relayInfo, textRequest)
@@ -169,6 +170,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		if err != nil {
 			return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
 		}
+		bodyContent = string(jsonData)
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
 		}
@@ -182,13 +184,6 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	}
 
 	statusCodeMappingStr := c.GetString("status_code_mapping")
-
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err = json.Marshal(textRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
-	}
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		relayInfo.IsStream = relayInfo.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
