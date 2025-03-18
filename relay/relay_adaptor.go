@@ -33,8 +33,6 @@ import (
 
 func GetAdaptor(apiType int) channel.Adaptor {
 	switch apiType {
-	//case constant.APITypeAIProxyLibrary:
-	//	return &aiproxy.Adaptor{}
 	case constant.APITypeAli:
 		return &ali.Adaptor{}
 	case constant.APITypeAnthropic:
@@ -83,6 +81,10 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &volcengine.Adaptor{}
 	case constant.APITypeBaiduV2:
 		return &baidu_v2.Adaptor{}
+	case constant.APITypeOpenRouter:
+		return &openai.Adaptor{}
+	case constant.APITypeXinference:
+		return &openai.Adaptor{}
 	}
 	return nil
 }

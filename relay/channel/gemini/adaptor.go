@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
-	"one-api/constant"
 	"one-api/dto"
 	"one-api/relay/channel"
 	relaycommon "one-api/relay/common"
 	"one-api/service"
+	"one-api/setting/model_setting"
 
 	"strings"
 
@@ -19,6 +19,12 @@ import (
 )
 
 type Adaptor struct {
+}
+
+func (a *Adaptor) ConvertClaudeRequest(*gin.Context, *relaycommon.RelayInfo, *dto.ClaudeRequest) (any, error) {
+	//TODO implement me
+	panic("implement me")
+	return nil, nil
 }
 
 func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
@@ -64,18 +70,16 @@ func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	// 从映射中获取模型名称对应的版本，如果找不到就使用 info.ApiVersion 或默认的版本 "v1beta"
-	version, beta := constant.GeminiModelMap[info.UpstreamModelName]
-	if !beta {
-		if info.ApiVersion != "" {
-			version = info.ApiVersion
-		} else {
-			version = "v1beta"
-		}
-	}
+	version := model_setting.GetGeminiVersionSetting(info.UpstreamModelName)
 
 	if strings.HasPrefix(info.UpstreamModelName, "imagen") {
 		return fmt.Sprintf("%s/%s/models/%s:predict", info.BaseUrl, version, info.UpstreamModelName), nil
+	}
+
+	if strings.HasPrefix(info.UpstreamModelName, "text-embedding") ||
+		strings.HasPrefix(info.UpstreamModelName, "embedding") ||
+		strings.HasPrefix(info.UpstreamModelName, "gemini-embedding") {
+		return fmt.Sprintf("%s/%s/models/%s:embedContent", info.BaseUrl, version, info.UpstreamModelName), nil
 	}
 
 	action := "generateContent"
@@ -91,7 +95,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
@@ -107,8 +111,37 @@ func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dt
 }
 
 func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
-	//TODO implement me
-	return nil, errors.New("not implemented")
+	if request.Input == nil {
+		return nil, errors.New("input is required")
+	}
+
+	inputs := request.ParseInput()
+	if len(inputs) == 0 {
+		return nil, errors.New("input is empty")
+	}
+
+	// only process the first input
+	geminiRequest := GeminiEmbeddingRequest{
+		Content: GeminiChatContent{
+			Parts: []GeminiPart{
+				{
+					Text: inputs[0],
+				},
+			},
+		},
+	}
+
+	// set specific parameters for different models
+	// https://ai.google.dev/api/embeddings?hl=zh-cn#method:-models.embedcontent
+	switch info.UpstreamModelName {
+	case "text-embedding-004":
+		// except embedding-001 supports setting `OutputDimensionality`
+		if request.Dimensions > 0 {
+			geminiRequest.OutputDimensionality = request.Dimensions
+		}
+	}
+
+	return geminiRequest, nil
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
@@ -118,6 +151,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *dto.OpenAIErrorWithStatusCode) {
 	if strings.HasPrefix(info.UpstreamModelName, "imagen") {
 		return GeminiImageHandler(c, resp, info)
+	}
+
+	// check if the model is an embedding model
+	if strings.HasPrefix(info.UpstreamModelName, "text-embedding") ||
+		strings.HasPrefix(info.UpstreamModelName, "embedding") ||
+		strings.HasPrefix(info.UpstreamModelName, "gemini-embedding") {
+		return GeminiEmbeddingHandler(c, resp, info)
 	}
 
 	if info.IsStream {

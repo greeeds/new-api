@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/dto"
+	"one-api/relay/helper"
 	"one-api/service"
 	"strings"
 	"sync"
@@ -78,7 +79,7 @@ func requestOpenAI2Zhipu(request dto.GeneralOpenAIRequest) *dto.GeneralOpenAIReq
 			mediaMessages := message.ParseContent()
 			for j, mediaMessage := range mediaMessages {
 				if mediaMessage.Type == dto.ContentTypeImageURL {
-					imageUrl := mediaMessage.ImageUrl.(dto.MessageImageUrl)
+					imageUrl := mediaMessage.GetImageMedia()
 					// check if base64
 					if strings.HasPrefix(imageUrl.Url, "data:image/") {
 						// 去除base64数据的URL前缀（如果有）
@@ -197,7 +198,7 @@ func zhipuStreamHandler(c *gin.Context, resp *http.Response) (*dto.OpenAIErrorWi
 		}
 		stopChan <- true
 	}()
-	service.SetEventStreamHeaders(c)
+	helper.SetEventStreamHeaders(c)
 	c.Stream(func(w io.Writer) bool {
 		select {
 		case data := <-dataChan:

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -17,9 +16,15 @@ import (
 	"one-api/relay/channel/lingyiwanwu"
 	"one-api/relay/channel/minimax"
 	"one-api/relay/channel/moonshot"
+	"one-api/relay/channel/openrouter"
+	"one-api/relay/channel/xinference"
 	relaycommon "one-api/relay/common"
+	"one-api/relay/common_handler"
 	"one-api/relay/constant"
+	"one-api/service"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Adaptor struct {
@@ -27,11 +32,39 @@ type Adaptor struct {
 	ResponseFormat string
 }
 
+func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
+	if !strings.Contains(request.Model, "claude") {
+		return nil, fmt.Errorf("you are using openai channel type with path /v1/messages, only claude model supported convert, but got %s", request.Model)
+	}
+	aiRequest, err := service.ClaudeToOpenAIRequest(*request)
+	if err != nil {
+		return nil, err
+	}
+	if info.SupportStreamOptions {
+		aiRequest.StreamOptions = &dto.StreamOptions{
+			IncludeUsage: true,
+		}
+	}
+	return a.ConvertOpenAIRequest(c, info, aiRequest)
+}
+
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 	a.ChannelType = info.ChannelType
+
+	// initialize ThinkingContentInfo when thinking_to_content is enabled
+	if think2Content, ok := info.ChannelSetting[constant2.ChannelSettingThinkingToContent].(bool); ok && think2Content {
+		info.ThinkingContentInfo = relaycommon.ThinkingContentInfo{
+			IsFirstThinkingContent:  true,
+			SendLastThinkingContent: false,
+			HasSentThinkingContent:  false,
+		}
+	}
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
+	if info.RelayFormat == relaycommon.RelayFormatClaude {
+		return fmt.Sprintf("%s/v1/chat/completions", info.BaseUrl), nil
+	}
 	if info.RelayMode == constant.RelayModeRealtime {
 		if strings.HasPrefix(info.BaseUrl, "https://") {
 			baseUrl := strings.TrimPrefix(info.BaseUrl, "https://")
@@ -100,14 +133,14 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, header *http.Header, info *
 	} else {
 		header.Set("Authorization", "Bearer "+info.ApiKey)
 	}
-	//if info.ChannelType == common.ChannelTypeOpenRouter {
-	//	req.Header.Set("HTTP-Referer", "https://github.com/songquanpeng/one-api")
-	//	req.Header.Set("X-Title", "One API")
-	//}
+	if info.ChannelType == common.ChannelTypeOpenRouter {
+		header.Set("HTTP-Referer", "https://github.com/Calcium-Ion/new-api")
+		header.Set("X-Title", "New API")
+	}
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
@@ -146,7 +179,7 @@ func (a *Adaptor) ConvertRequest(c *gin.Context, info *relaycommon.RelayInfo, re
 }
 
 func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
-	return nil, errors.New("not implemented")
+	return request, nil
 }
 
 func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
@@ -228,11 +261,13 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 		err, usage = OpenaiSTTHandler(c, resp, info, a.ResponseFormat)
 	case constant.RelayModeImagesGenerations:
 		err, usage = OpenaiTTSHandler(c, resp, info)
+	case constant.RelayModeRerank:
+		err, usage = common_handler.RerankHandler(c, info, resp)
 	default:
 		if info.IsStream {
 			err, usage = OaiStreamHandler(c, resp, info)
 		} else {
-			err, usage = OpenaiHandler(c, resp, info.PromptTokens, info.UpstreamModelName)
+			err, usage = OpenaiHandler(c, resp, info)
 		}
 	}
 	return
@@ -248,6 +283,10 @@ func (a *Adaptor) GetModelList() []string {
 		return lingyiwanwu.ModelList
 	case common.ChannelTypeMiniMax:
 		return minimax.ModelList
+	case common.ChannelTypeXinference:
+		return xinference.ModelList
+	case common.ChannelTypeOpenRouter:
+		return openrouter.ModelList
 	default:
 		return ModelList
 	}
@@ -263,6 +302,10 @@ func (a *Adaptor) GetChannelName() string {
 		return lingyiwanwu.ChannelName
 	case common.ChannelTypeMiniMax:
 		return minimax.ChannelName
+	case common.ChannelTypeXinference:
+		return xinference.ChannelName
+	case common.ChannelTypeOpenRouter:
+		return openrouter.ChannelName
 	default:
 		return ChannelName
 	}
