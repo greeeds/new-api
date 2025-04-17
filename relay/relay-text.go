@@ -170,6 +170,23 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		if err != nil {
 			return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
 		}
+
+		// apply param override
+		if len(relayInfo.ParamOverride) > 0 {
+			reqMap := make(map[string]interface{})
+			err = json.Unmarshal(jsonData, &reqMap)
+			if err != nil {
+				return service.OpenAIErrorWrapperLocal(err, "param_override_unmarshal_failed", http.StatusInternalServerError)
+			}
+			for key, value := range relayInfo.ParamOverride {
+				reqMap[key] = value
+			}
+			jsonData, err = json.Marshal(reqMap)
+			if err != nil {
+				return service.OpenAIErrorWrapperLocal(err, "param_override_marshal_failed", http.StatusInternalServerError)
+			}
+		}
+
 		bodyContent = string(jsonData)
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
@@ -184,6 +201,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	}
 
 	statusCodeMappingStr := c.GetString("status_code_mapping")
+
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		relayInfo.IsStream = relayInfo.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")

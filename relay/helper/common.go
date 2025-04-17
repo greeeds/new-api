@@ -55,7 +55,20 @@ func StringData(c *gin.Context, str string) error {
 	return nil
 }
 
+func PingData(c *gin.Context) error {
+	c.Writer.Write([]byte(": PING\n\n"))
+	if flusher, ok := c.Writer.(http.Flusher); ok {
+		flusher.Flush()
+	} else {
+		return errors.New("streaming error: flusher not found")
+	}
+	return nil
+}
+
 func ObjectData(c *gin.Context, object interface{}) error {
+	if object == nil {
+		return errors.New("object is nil")
+	}
 	jsonData, err := json.Marshal(object)
 	if err != nil {
 		return fmt.Errorf("error marshalling object: %w", err)

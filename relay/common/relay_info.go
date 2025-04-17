@@ -19,13 +19,18 @@ type ThinkingContentInfo struct {
 }
 
 const (
-	LastMessageTypeText  = "text"
-	LastMessageTypeTools = "tools"
+	LastMessageTypeNone     = "none"
+	LastMessageTypeText     = "text"
+	LastMessageTypeTools    = "tools"
+	LastMessageTypeThinking = "thinking"
 )
 
 type ClaudeConvertInfo struct {
 	LastMessagesType string
 	Index            int
+	Usage            *dto.Usage
+	FinishReason     string
+	Done             bool
 }
 
 const (
@@ -76,13 +81,14 @@ type RelayInfo struct {
 	AudioUsage           bool
 	ReasoningEffort      string
 	ChannelSetting       map[string]interface{}
+	ParamOverride        map[string]interface{}
 	UserSetting          map[string]interface{}
 	UserEmail            string
 	UserQuota            int
 	RelayFormat          string
 	SendResponseCount    int
 	ThinkingContentInfo
-	ClaudeConvertInfo
+	*ClaudeConvertInfo
 	*RerankerInfo
 }
 
@@ -96,6 +102,7 @@ var streamSupportedChannels = map[int]bool{
 	common.ChannelTypeAzure:      true,
 	common.ChannelTypeVolcEngine: true,
 	common.ChannelTypeOllama:     true,
+	common.ChannelTypeXai:        true,
 }
 
 func GenRelayInfoWs(c *gin.Context, ws *websocket.Conn) *RelayInfo {
@@ -111,8 +118,8 @@ func GenRelayInfoClaude(c *gin.Context) *RelayInfo {
 	info := GenRelayInfo(c)
 	info.RelayFormat = RelayFormatClaude
 	info.ShouldIncludeUsage = false
-	info.ClaudeConvertInfo = ClaudeConvertInfo{
-		LastMessagesType: LastMessageTypeText,
+	info.ClaudeConvertInfo = &ClaudeConvertInfo{
+		LastMessagesType: LastMessageTypeNone,
 	}
 	return info
 }
@@ -131,6 +138,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 	channelType := c.GetInt("channel_type")
 	channelId := c.GetInt("channel_id")
 	channelSetting := c.GetStringMap("channel_setting")
+	paramOverride := c.GetStringMap("param_override")
 
 	tokenId := c.GetInt("token_id")
 	tokenKey := c.GetString("token_key")
@@ -168,6 +176,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 		ApiKey:         strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
 		Organization:   c.GetString("channel_organization"),
 		ChannelSetting: channelSetting,
+		ParamOverride:  paramOverride,
 		RelayFormat:    RelayFormatOpenAI,
 		ThinkingContentInfo: ThinkingContentInfo{
 			IsFirstThinkingContent:  true,
@@ -207,6 +216,10 @@ func (info *RelayInfo) SetFirstResponseTime() {
 		info.FirstResponseTime = time.Now()
 		info.isFirstResponse = false
 	}
+}
+
+func (info *RelayInfo) HasSendResponse() bool {
+	return info.FirstResponseTime.After(info.StartTime)
 }
 
 type TaskRelayInfo struct {

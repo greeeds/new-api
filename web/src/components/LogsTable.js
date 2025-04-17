@@ -13,17 +13,19 @@ import {
 
 import {
   Avatar,
-  Button, Descriptions,
+  Button,
+  Descriptions,
   Form,
   Layout,
-  Modal, Popover,
+  Modal,
+  Popover,
   Select,
   Space,
   Spin,
   Table,
   Tag,
   Tooltip,
-  Checkbox
+  Checkbox,
 } from '@douyinfe/semi-ui';
 import { ITEMS_PER_PAGE } from '../constants';
 import {
@@ -37,7 +39,7 @@ import {
   renderModelPriceSimple,
   renderNumber,
   renderQuota,
-  stringToColor
+  stringToColor,
 } from '../helpers/render';
 import Paragraph from '@douyinfe/semi-ui/lib/es/typography/paragraph';
 import { getLogOther } from '../helpers/other.js';
@@ -79,23 +81,51 @@ const LogsTable = () => {
   function renderType(type) {
     switch (type) {
       case 1:
-        return <Tag color='cyan' size='large'>{t('充值')}</Tag>;
+        return (
+          <Tag color='cyan' size='large'>
+            {t('充值')}
+          </Tag>
+        );
       case 2:
-        return <Tag color='lime' size='large'>{t('消费')}</Tag>;
+        return (
+          <Tag color='lime' size='large'>
+            {t('消费')}
+          </Tag>
+        );
       case 3:
-        return <Tag color='orange' size='large'>{t('管理')}</Tag>;
+        return (
+          <Tag color='orange' size='large'>
+            {t('管理')}
+          </Tag>
+        );
       case 4:
-        return <Tag color='purple' size='large'>{t('系统')}</Tag>;
+        return (
+          <Tag color='purple' size='large'>
+            {t('系统')}
+          </Tag>
+        );
       default:
-        return <Tag color='black' size='large'>{t('未知')}</Tag>;
+        return (
+          <Tag color='black' size='large'>
+            {t('未知')}
+          </Tag>
+        );
     }
   }
 
   function renderIsStream(bool) {
     if (bool) {
-      return <Tag color='blue' size='large'>{t('流')}</Tag>;
+      return (
+        <Tag color='blue' size='large'>
+          {t('流')}
+        </Tag>
+      );
     } else {
-      return <Tag color='purple' size='large'>{t('非流')}</Tag>;
+      return (
+        <Tag color='purple' size='large'>
+          {t('非流')}
+        </Tag>
+      );
     }
   }
 
@@ -153,56 +183,70 @@ const LogsTable = () => {
   }
 
   function renderModelName(record) {
-
     let other = getLogOther(record.other);
-    let modelMapped = other?.is_model_mapped && other?.upstream_model_name && other?.upstream_model_name !== '';
+    let modelMapped =
+      other?.is_model_mapped &&
+      other?.upstream_model_name &&
+      other?.upstream_model_name !== '';
     if (!modelMapped) {
-      return <Tag
-        color={stringToColor(record.model_name)}
-        size='large'
-        onClick={(event) => {
-          copyText(event, record.model_name).then(r => {});
-        }}
-      >
-        {' '}{record.model_name}{' '}
-      </Tag>;
+      return (
+        <Tag
+          color={stringToColor(record.model_name)}
+          size='large'
+          onClick={(event) => {
+            copyText(event, record.model_name).then((r) => {});
+          }}
+        >
+          {' '}
+          {record.model_name}{' '}
+        </Tag>
+      );
     } else {
       return (
         <>
           <Space vertical align={'start'}>
-            <Popover content={
-              <div style={{padding: 10}}>
-                <Space vertical align={'start'}>
-                  <Tag
-                    color={stringToColor(record.model_name)}
-                    size='large'
-                    onClick={(event) => {
-                      copyText(event, record.model_name).then(r => {});
-                    }}
-                  >
-                    {t('请求并计费模型')}{' '}{record.model_name}{' '}
-                  </Tag>
-                  <Tag
-                    color={stringToColor(other.upstream_model_name)}
-                    size='large'
-                    onClick={(event) => {
-                      copyText(event, other.upstream_model_name).then(r => {});
-                    }}
-                  >
-                    {t('实际模型')}{' '}{other.upstream_model_name}{' '}
-                  </Tag>
-                </Space>
-              </div>
-            }>
+            <Popover
+              content={
+                <div style={{ padding: 10 }}>
+                  <Space vertical align={'start'}>
+                    <Tag
+                      color={stringToColor(record.model_name)}
+                      size='large'
+                      onClick={(event) => {
+                        copyText(event, record.model_name).then((r) => {});
+                      }}
+                    >
+                      {t('请求并计费模型')} {record.model_name}{' '}
+                    </Tag>
+                    <Tag
+                      color={stringToColor(other.upstream_model_name)}
+                      size='large'
+                      onClick={(event) => {
+                        copyText(event, other.upstream_model_name).then(
+                          (r) => {},
+                        );
+                      }}
+                    >
+                      {t('实际模型')} {other.upstream_model_name}{' '}
+                    </Tag>
+                  </Space>
+                </div>
+              }
+            >
               <Tag
                 color={stringToColor(record.model_name)}
                 size='large'
                 onClick={(event) => {
-                  copyText(event, record.model_name).then(r => {});
+                  copyText(event, record.model_name).then((r) => {});
                 }}
-                suffixIcon={<IconRefresh style={{width: '0.8em', height: '0.8em', opacity: 0.6}} />}
+                suffixIcon={
+                  <IconRefresh
+                    style={{ width: '0.8em', height: '0.8em', opacity: 0.6 }}
+                  />
+                }
               >
-                {' '}{record.model_name}{' '}
+                {' '}
+                {record.model_name}{' '}
               </Tag>
             </Popover>
             {/*<Tooltip content={t('实际模型')}>*/}
@@ -220,7 +264,6 @@ const LogsTable = () => {
         </>
       );
     }
-
   }
 
   // Define column keys for selection
@@ -237,7 +280,7 @@ const LogsTable = () => {
     COMPLETION: 'completion',
     COST: 'cost',
     RETRY: 'retry',
-    DETAILS: 'details'
+    DETAILS: 'details',
   };
 
   // State for column visibility
@@ -278,7 +321,7 @@ const LogsTable = () => {
       [COLUMN_KEYS.COMPLETION]: true,
       [COLUMN_KEYS.COST]: true,
       [COLUMN_KEYS.RETRY]: isAdminUser,
-      [COLUMN_KEYS.DETAILS]: true
+      [COLUMN_KEYS.DETAILS]: true,
     };
   };
 
@@ -297,18 +340,23 @@ const LogsTable = () => {
 
   // Handle "Select All" checkbox
   const handleSelectAll = (checked) => {
-    const allKeys = Object.keys(COLUMN_KEYS).map(key => COLUMN_KEYS[key]);
+    const allKeys = Object.keys(COLUMN_KEYS).map((key) => COLUMN_KEYS[key]);
     const updatedColumns = {};
-    
-    allKeys.forEach(key => {
+
+    allKeys.forEach((key) => {
       // For admin-only columns, only enable them if user is admin
-      if ((key === COLUMN_KEYS.CHANNEL || key === COLUMN_KEYS.USERNAME || key === COLUMN_KEYS.RETRY) && !isAdminUser) {
+      if (
+        (key === COLUMN_KEYS.CHANNEL ||
+          key === COLUMN_KEYS.USERNAME ||
+          key === COLUMN_KEYS.RETRY) &&
+        !isAdminUser
+      ) {
         updatedColumns[key] = false;
       } else {
         updatedColumns[key] = checked;
       }
     });
-    
+
     setVisibleColumns(updatedColumns);
   };
 
@@ -362,7 +410,7 @@ const LogsTable = () => {
               style={{ marginRight: 4 }}
               onClick={(event) => {
                 event.stopPropagation();
-                showUserInfo(record.user_id)
+                showUserInfo(record.user_id);
               }}
             >
               {typeof text === 'string' && text.slice(0, 1)}
@@ -404,32 +452,27 @@ const LogsTable = () => {
       dataIndex: 'group',
       render: (text, record, index) => {
         if (record.type === 0 || record.type === 2) {
-         if (record.group) {
-            return (
-              <>
-                {renderGroup(record.group)}
-              </>
-            );
-         } else {
-           let other = null;
-           try {
-             other = JSON.parse(record.other);
-           } catch (e) {
-             console.error(`Failed to parse record.other: "${record.other}".`, e);
-           }
-           if (other === null) {
-             return <></>;
-           }
-           if (other.group !== undefined) {
-             return (
-               <>
-                 {renderGroup(other.group)}
-               </>
-             );
-           } else {
-             return <></>;
-           }
-         }
+          if (record.group) {
+            return <>{renderGroup(record.group)}</>;
+          } else {
+            let other = null;
+            try {
+              other = JSON.parse(record.other);
+            } catch (e) {
+              console.error(
+                `Failed to parse record.other: "${record.other}".`,
+                e,
+              );
+            }
+            if (other === null) {
+              return <></>;
+            }
+            if (other.group !== undefined) {
+              return <>{renderGroup(other.group)}</>;
+            } else {
+              return <></>;
+            }
+          }
         } else {
           return <></>;
         }
@@ -573,30 +616,30 @@ const LogsTable = () => {
 
         let content = other?.claude
           ? renderClaudeModelPriceSimple(
-            other.model_ratio,
-            other.model_price,
-            other.group_ratio,
-            other.cache_tokens || 0,
-            other.cache_ratio || 1.0,
-            other.cache_creation_tokens || 0,
-            other.cache_creation_ratio || 1.0,
-          )
+              other.model_ratio,
+              other.model_price,
+              other.group_ratio,
+              other.cache_tokens || 0,
+              other.cache_ratio || 1.0,
+              other.cache_creation_tokens || 0,
+              other.cache_creation_ratio || 1.0,
+            )
           : renderModelPriceSimple(
-            other.model_ratio,
-            other.model_price,
-            other.group_ratio,
-            other.cache_tokens || 0,
-            other.cache_ratio || 1.0,
-          );
+              other.model_ratio,
+              other.model_price,
+              other.group_ratio,
+              other.cache_tokens || 0,
+              other.cache_ratio || 1.0,
+            );
         return (
-            <Paragraph
-                ellipsis={{
-                  rows: 2,
-                }}
-                style={{ maxWidth: 240 }}
-            >
-              {content}
-            </Paragraph>
+          <Paragraph
+            ellipsis={{
+              rows: 2,
+            }}
+            style={{ maxWidth: 240 }}
+          >
+            {content}
+          </Paragraph>
         );
       },
     },
@@ -616,13 +659,16 @@ const LogsTable = () => {
   useEffect(() => {
     if (Object.keys(visibleColumns).length > 0) {
       // Save to localStorage
-      localStorage.setItem('logs-table-columns', JSON.stringify(visibleColumns));
+      localStorage.setItem(
+        'logs-table-columns',
+        JSON.stringify(visibleColumns),
+      );
     }
   }, [visibleColumns]);
 
   // Filter columns based on visibility settings
   const getVisibleColumns = () => {
-    return allColumns.filter(column => visibleColumns[column.key]);
+    return allColumns.filter((column) => visibleColumns[column.key]);
   };
 
   // Column selector modal
@@ -635,42 +681,59 @@ const LogsTable = () => {
         footer={
           <>
             <Button onClick={() => initDefaultColumns()}>{t('重置')}</Button>
-            <Button onClick={() => setShowColumnSelector(false)}>{t('取消')}</Button>
-            <Button type="primary" onClick={() => setShowColumnSelector(false)}>{t('确定')}</Button>
+            <Button onClick={() => setShowColumnSelector(false)}>
+              {t('取消')}
+            </Button>
+            <Button type='primary' onClick={() => setShowColumnSelector(false)}>
+              {t('确定')}
+            </Button>
           </>
         }
       >
         <div style={{ marginBottom: 20 }}>
           <Checkbox
-            checked={Object.values(visibleColumns).every(v => v === true)}
-            indeterminate={Object.values(visibleColumns).some(v => v === true) && !Object.values(visibleColumns).every(v => v === true)}
-            onChange={e => handleSelectAll(e.target.checked)}
+            checked={Object.values(visibleColumns).every((v) => v === true)}
+            indeterminate={
+              Object.values(visibleColumns).some((v) => v === true) &&
+              !Object.values(visibleColumns).every((v) => v === true)
+            }
+            onChange={(e) => handleSelectAll(e.target.checked)}
           >
             {t('全选')}
           </Checkbox>
         </div>
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap',
-          maxHeight: '400px',
-          overflowY: 'auto',
-          border: '1px solid var(--semi-color-border)',
-          borderRadius: '6px',
-          padding: '16px'
-        }}>
-          {allColumns.map(column => {
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: '6px',
+            padding: '16px',
+          }}
+        >
+          {allColumns.map((column) => {
             // Skip admin-only columns for non-admin users
-            if (!isAdminUser && (column.key === COLUMN_KEYS.CHANNEL || 
-                                column.key === COLUMN_KEYS.USERNAME || 
-                                column.key === COLUMN_KEYS.RETRY)) {
+            if (
+              !isAdminUser &&
+              (column.key === COLUMN_KEYS.CHANNEL ||
+                column.key === COLUMN_KEYS.USERNAME ||
+                column.key === COLUMN_KEYS.RETRY)
+            ) {
               return null;
             }
-            
+
             return (
-              <div key={column.key} style={{ width: '50%', marginBottom: 16, paddingRight: 8 }}>
+              <div
+                key={column.key}
+                style={{ width: '50%', marginBottom: 16, paddingRight: 8 }}
+              >
                 <Checkbox
                   checked={!!visibleColumns[column.key]}
-                  onChange={e => handleColumnVisibilityChange(column.key, e.target.checked)}
+                  onChange={(e) =>
+                    handleColumnVisibilityChange(column.key, e.target.checked)
+                  }
                 >
                   {column.title}
                 </Checkbox>
@@ -720,7 +783,7 @@ const LogsTable = () => {
   });
 
   const handleInputChange = (value, name) => {
-    setInputs(inputs => ({ ...inputs, [name]: value }));
+    setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
 
   const getLogSelfStat = async () => {
@@ -776,10 +839,18 @@ const LogsTable = () => {
         title: t('用户信息'),
         content: (
           <div style={{ padding: 12 }}>
-            <p>{t('用户名')}: {data.username}</p>
-            <p>{t('余额')}: {renderQuota(data.quota)}</p>
-            <p>{t('已用额度')}：{renderQuota(data.used_quota)}</p>
-            <p>{t('请求次数')}：{renderNumber(data.request_count)}</p>
+            <p>
+              {t('用户名')}: {data.username}
+            </p>
+            <p>
+              {t('余额')}: {renderQuota(data.quota)}
+            </p>
+            <p>
+              {t('已用额度')}：{renderQuota(data.used_quota)}
+            </p>
+            <p>
+              {t('请求次数')}：{renderNumber(data.request_count)}
+            </p>
           </div>
         ),
         centered: true,
@@ -818,7 +889,7 @@ const LogsTable = () => {
       if (isAdminUser && (logs[i].type === 0 || logs[i].type === 2)) {
         expandDataLocal.push({
           key: t('渠道信息'),
-          value: `${logs[i].channel} - ${logs[i].channel_name || '[未知]'}`
+          value: `${logs[i].channel} - ${logs[i].channel_name || '[未知]'}`,
         });
       }
       if (other?.ws || other?.audio) {
@@ -856,25 +927,28 @@ const LogsTable = () => {
           key: t('日志详情'),
           value: other?.claude
             ? renderClaudeLogContent(
-              other?.model_ratio,
-              other.completion_ratio,
-              other.model_price,
-              other.group_ratio,
-              other.user_group_ratio,
-              other.cache_ratio || 1.0,
-              other.cache_creation_ratio || 1.0
-            )
+                other?.model_ratio,
+                other.completion_ratio,
+                other.model_price,
+                other.group_ratio,
+                other.user_group_ratio,
+                other.cache_ratio || 1.0,
+                other.cache_creation_ratio || 1.0,
+              )
             : renderLogContent(
-              other?.model_ratio,
-              other.completion_ratio,
-              other.model_price,
-              other.group_ratio,
-              other.user_group_ratio
-            ),
+                other?.model_ratio,
+                other.completion_ratio,
+                other.model_price,
+                other.group_ratio,
+                other.user_group_ratio,
+              ),
         });
       }
       if (logs[i].type === 2) {
-        let modelMapped = other?.is_model_mapped && other?.upstream_model_name && other?.upstream_model_name !== '';
+        let modelMapped =
+          other?.is_model_mapped &&
+          other?.upstream_model_name &&
+          other?.upstream_model_name !== '';
         if (modelMapped) {
           expandDataLocal.push({
             key: t('请求并计费模型'),
@@ -1031,29 +1105,41 @@ const LogsTable = () => {
         <Header>
           <Spin spinning={loadingStat}>
             <Space>
-              <Tag color='blue' size='large' style={{ 
-                padding: 15, 
-                borderRadius: '8px', 
-                fontWeight: 500,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-              }}>
+              <Tag
+                color='blue'
+                size='large'
+                style={{
+                  padding: 15,
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              >
                 {t('消耗额度')}: {renderQuota(stat.quota)}
               </Tag>
-              <Tag color='pink' size='large' style={{ 
-                padding: 15, 
-                borderRadius: '8px', 
-                fontWeight: 500,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-              }}>
+              <Tag
+                color='pink'
+                size='large'
+                style={{
+                  padding: 15,
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              >
                 RPM: {stat.rpm}
               </Tag>
-              <Tag color='white' size='large' style={{ 
-                padding: 15, 
-                border: 'none', 
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', 
-                borderRadius: '8px',
-                fontWeight: 500,
-              }}>
+              <Tag
+                color='white'
+                size='large'
+                style={{
+                  padding: 15,
+                  border: 'none',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                }}
+              >
                 TPM: {stat.tpm}
               </Tag>
             </Space>
@@ -1063,46 +1149,46 @@ const LogsTable = () => {
           <>
             <Form.Section>
               <div style={{ marginBottom: 10 }}>
-              {
-                  styleState.isMobile ? (
-                    <div>
-                      <Form.DatePicker
-                        field='start_timestamp'
-                        label={t('起始时间')}
-                        style={{ width: 272 }}
-                        initValue={start_timestamp}
-                        type='dateTime'
-                        onChange={(value) => {
-                          console.log(value);
-                          handleInputChange(value, 'start_timestamp')
-                        }}
-                      />
-                      <Form.DatePicker
-                        field='end_timestamp'
-                        fluid
-                        label={t('结束时间')}
-                        style={{ width: 272 }}
-                        initValue={end_timestamp}
-                        type='dateTime'
-                        onChange={(value) => handleInputChange(value, 'end_timestamp')}
-                      />
-                    </div>
-                  ) : (
+                {styleState.isMobile ? (
+                  <div>
                     <Form.DatePicker
-                      field="range_timestamp"
-                      label={t('时间范围')}
-                      initValue={[start_timestamp, end_timestamp]}
-                      type="dateTimeRange"
-                      name="range_timestamp"
+                      field='start_timestamp'
+                      label={t('起始时间')}
+                      style={{ width: 272 }}
+                      initValue={start_timestamp}
+                      type='dateTime'
                       onChange={(value) => {
-                        if (Array.isArray(value) && value.length === 2) {
-                          handleInputChange(value[0], 'start_timestamp');
-                          handleInputChange(value[1], 'end_timestamp');
-                        }
+                        console.log(value);
+                        handleInputChange(value, 'start_timestamp');
                       }}
                     />
-                  )
-                }
+                    <Form.DatePicker
+                      field='end_timestamp'
+                      fluid
+                      label={t('结束时间')}
+                      style={{ width: 272 }}
+                      initValue={end_timestamp}
+                      type='dateTime'
+                      onChange={(value) =>
+                        handleInputChange(value, 'end_timestamp')
+                      }
+                    />
+                  </div>
+                ) : (
+                  <Form.DatePicker
+                    field='range_timestamp'
+                    label={t('时间范围')}
+                    initValue={[start_timestamp, end_timestamp]}
+                    type='dateTimeRange'
+                    name='range_timestamp'
+                    onChange={(value) => {
+                      if (Array.isArray(value) && value.length === 2) {
+                        handleInputChange(value[0], 'start_timestamp');
+                        handleInputChange(value[1], 'end_timestamp');
+                      }
+                    }}
+                  />
+                )}
               </div>
             </Form.Section>
             <Form.Input
@@ -1163,14 +1249,14 @@ const LogsTable = () => {
             <Form.Section></Form.Section>
           </>
         </Form>
-        <div style={{marginTop:10}}>
+        <div style={{ marginTop: 10 }}>
           <Select
-              defaultValue='0'
-              style={{ width: 120 }}
-              onChange={(value) => {
-                setLogType(parseInt(value));
-                loadLogs(0, pageSize, parseInt(value));
-              }}
+            defaultValue='0'
+            style={{ width: 120 }}
+            onChange={(value) => {
+              setLogType(parseInt(value));
+              loadLogs(0, pageSize, parseInt(value));
+            }}
           >
             <Select.Option value='0'>{t('全部')}</Select.Option>
             <Select.Option value='1'>{t('充值')}</Select.Option>
@@ -1194,13 +1280,13 @@ const LogsTable = () => {
           expandedRowRender={expandRowRender}
           expandRowByClick={true}
           dataSource={logs}
-          rowKey="key"
+          rowKey='key'
           pagination={{
             formatPageText: (page) =>
               t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
                 start: page.currentStart,
                 end: page.currentEnd,
-                total: logCount
+                total: logCount,
               }),
             currentPage: activePage,
             pageSize: pageSize,
