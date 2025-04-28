@@ -96,9 +96,9 @@ func GetAllChannels(startIdx int, num int, selectAll bool, idSort bool) ([]*Chan
 		order = "id desc"
 	}
 	if selectAll {
-		err = DB.Order(order).Find(&channels).Error
+		err = DB.Order(order).Order("created_time desc").Find(&channels).Error
 	} else {
-		err = DB.Order(order).Limit(num).Offset(startIdx).Omit("key").Find(&channels).Error
+		err = DB.Order(order).Order("created_time desc").Limit(num).Offset(startIdx).Omit("key").Find(&channels).Error
 	}
 	return channels, err
 }
@@ -109,7 +109,7 @@ func GetChannelsByTag(tag string, idSort bool) ([]*Channel, error) {
 	if idSort {
 		order = "id desc"
 	}
-	err := DB.Where("tag = ?", tag).Order(order).Find(&channels).Error
+	err := DB.Where("tag = ?", tag).Order(order).Order("created_time desc").Find(&channels).Error
 	return channels, err
 }
 
@@ -155,7 +155,7 @@ func SearchChannels(keyword string, group string, model string, idSort bool) ([]
 	}
 
 	// 执行查询
-	err := baseQuery.Where(whereClause, args...).Order(order).Find(&channels).Error
+	err := baseQuery.Where(whereClause, args...).Order(order).Order("created_time desc").Find(&channels).Error
 	if err != nil {
 		return nil, err
 	}
