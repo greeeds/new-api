@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"one-api/common"
@@ -239,7 +238,7 @@ func ImageHelper(c *gin.Context) *dto.OpenAIErrorWithStatusCode {
 	}
 	var bodyContent string
 	bodyContent = ""
-	jsonData, err = json.Marshal(imageRequest)
+	jsonData, err := json.Marshal(imageRequest)
 	if err == nil {
 		bodyContent = string(jsonData)
 	}
