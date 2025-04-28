@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/smtp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -115,7 +116,7 @@ func SendEmail(subject string, receiver string, content string) error {
 		if err != nil {
 			return err
 		}
-	} else if isOutlookServer(SMTPAccount) || SMTPServer == "smtp.azurecomm.net" {
+	} else if isOutlookServer(SMTPAccount) || slices.Contains(EmailLoginAuthServerList, SMTPServer) {
 		auth = LoginAuth(SMTPAccount, SMTPToken)
 		err = smtp.SendMail(addr, auth, SMTPFrom, to, mail)
 	} else {
