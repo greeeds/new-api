@@ -3,10 +3,11 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"one-api/common"
 	"one-api/constant"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/bytedance/gopkg/util/gopool"
 )
@@ -23,12 +24,12 @@ type UserBase struct {
 }
 
 func (user *UserBase) WriteContext(c *gin.Context) {
-	c.Set(constant.ContextKeyUserGroup, user.Group)
-	c.Set(constant.ContextKeyUserQuota, user.Quota)
-	c.Set(constant.ContextKeyUserStatus, user.Status)
-	c.Set(constant.ContextKeyUserEmail, user.Email)
-	c.Set("username", user.Username)
-	c.Set(constant.ContextKeyUserSetting, user.GetSetting())
+	common.SetContextKey(c, constant.ContextKeyUserGroup, user.Group)
+	common.SetContextKey(c, constant.ContextKeyUserQuota, user.Quota)
+	common.SetContextKey(c, constant.ContextKeyUserStatus, user.Status)
+	common.SetContextKey(c, constant.ContextKeyUserEmail, user.Email)
+	common.SetContextKey(c, constant.ContextKeyUserName, user.Username)
+	common.SetContextKey(c, constant.ContextKeyUserSetting, user.GetSetting())
 }
 
 func (user *UserBase) GetSetting() map[string]interface{} {
@@ -57,7 +58,7 @@ func invalidateUserCache(userId int) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisHDelObj(getUserCacheKey(userId))
+	return common.RedisDelKey(getUserCacheKey(userId))
 }
 
 // updateUserCache updates all user cache fields using hash
@@ -69,7 +70,7 @@ func updateUserCache(user User) error {
 	return common.RedisHSetObj(
 		getUserCacheKey(user.Id),
 		user.ToBaseUser(),
-		time.Duration(constant.UserId2QuotaCacheSeconds)*time.Second,
+		time.Duration(common.RedisKeyCacheSeconds())*time.Second,
 	)
 }
 

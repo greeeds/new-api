@@ -1,5 +1,7 @@
 package dto
 
+import "encoding/json"
+
 type SimpleResponse struct {
 	Usage `json:"usage"`
 	Error *OpenAIError `json:"error"`
@@ -24,7 +26,7 @@ type OpenAITextResponse struct {
 	Id      string                     `json:"id"`
 	Model   string                     `json:"model"`
 	Object  string                     `json:"object"`
-	Created int64                      `json:"created"`
+	Created any                        `json:"created"`
 	Choices []OpenAITextResponseChoice `json:"choices"`
 	Error   *OpenAIError               `json:"error,omitempty"`
 	Usage   `json:"usage"`
@@ -176,6 +178,8 @@ type Usage struct {
 	InputTokens            int                `json:"input_tokens"`
 	OutputTokens           int                `json:"output_tokens"`
 	InputTokensDetails     *InputTokenDetails `json:"input_tokens_details"`
+	// OpenRouter Params
+	Cost float64 `json:"cost,omitempty"`
 }
 
 type InputTokenDetails struct {
@@ -190,4 +194,69 @@ type OutputTokenDetails struct {
 	TextTokens      int `json:"text_tokens"`
 	AudioTokens     int `json:"audio_tokens"`
 	ReasoningTokens int `json:"reasoning_tokens"`
+}
+
+type OpenAIResponsesResponse struct {
+	ID                 string               `json:"id"`
+	Object             string               `json:"object"`
+	CreatedAt          int                  `json:"created_at"`
+	Status             string               `json:"status"`
+	Error              *OpenAIError         `json:"error,omitempty"`
+	IncompleteDetails  *IncompleteDetails   `json:"incomplete_details,omitempty"`
+	Instructions       string               `json:"instructions"`
+	MaxOutputTokens    int                  `json:"max_output_tokens"`
+	Model              string               `json:"model"`
+	Output             []ResponsesOutput    `json:"output"`
+	ParallelToolCalls  bool                 `json:"parallel_tool_calls"`
+	PreviousResponseID string               `json:"previous_response_id"`
+	Reasoning          *Reasoning           `json:"reasoning"`
+	Store              bool                 `json:"store"`
+	Temperature        float64              `json:"temperature"`
+	ToolChoice         string               `json:"tool_choice"`
+	Tools              []ResponsesToolsCall `json:"tools"`
+	TopP               float64              `json:"top_p"`
+	Truncation         string               `json:"truncation"`
+	Usage              *Usage               `json:"usage"`
+	User               json.RawMessage      `json:"user"`
+	Metadata           json.RawMessage      `json:"metadata"`
+}
+
+type IncompleteDetails struct {
+	Reasoning string `json:"reasoning"`
+}
+
+type ResponsesOutput struct {
+	Type    string                   `json:"type"`
+	ID      string                   `json:"id"`
+	Status  string                   `json:"status"`
+	Role    string                   `json:"role"`
+	Content []ResponsesOutputContent `json:"content"`
+}
+
+type ResponsesOutputContent struct {
+	Type        string        `json:"type"`
+	Text        string        `json:"text"`
+	Annotations []interface{} `json:"annotations"`
+}
+
+const (
+	BuildInToolWebSearchPreview = "web_search_preview"
+	BuildInToolFileSearch       = "file_search"
+)
+
+const (
+	BuildInCallWebSearchCall = "web_search_call"
+)
+
+const (
+	ResponsesOutputTypeItemAdded = "response.output_item.added"
+	ResponsesOutputTypeItemDone  = "response.output_item.done"
+)
+
+// ResponsesStreamResponse 用于处理 /v1/responses 流式响应
+type ResponsesStreamResponse struct {
+	Type     string                   `json:"type"`
+	Response *OpenAIResponsesResponse `json:"response,omitempty"`
+	Delta    string                   `json:"delta,omitempty"`
+	Item     *ResponsesOutput         `json:"item,omitempty"`
 }

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   API,
@@ -7,46 +6,47 @@ import {
   isMobile,
   showError,
   showSuccess,
-} from '../../helpers';
-import {
-  getQuotaPerUnit,
   renderQuota,
   renderQuotaWithPrompt,
-} from '../../helpers/render';
+} from '../../helpers';
 import {
-  AutoComplete,
   Button,
-  Input,
   Modal,
   SideSheet,
   Space,
   Spin,
   Typography,
+  Card,
+  Tag,
+  Form,
+  Avatar,
+  Row,
+  Col,
 } from '@douyinfe/semi-ui';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import { Divider } from 'semantic-ui-react';
+import {
+  IconCreditCard,
+  IconSave,
+  IconClose,
+  IconGift,
+} from '@douyinfe/semi-icons';
+
+const { Text, Title } = Typography;
 
 const EditRedemption = (props) => {
   const { t } = useTranslation();
   const isEdit = props.editingRedemption.id !== undefined;
   const [loading, setLoading] = useState(isEdit);
+  const formApiRef = useRef(null);
 
-  const params = useParams();
-  const navigate = useNavigate();
-  const originInputs = {
+  const getInitValues = () => ({
     name: '',
     quota: 100000,
     count: 1,
-  };
-  const [inputs, setInputs] = useState(originInputs);
-  const { name, quota, count } = inputs;
+    expired_time: null,
+  });
 
   const handleCancel = () => {
     props.handleClose();
-  };
-
-  const handleInputChange = (name, value) => {
-    setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
 
   const loadRedemption = async () => {
@@ -54,7 +54,12 @@ const EditRedemption = (props) => {
     let res = await API.get(`/api/redemption/${props.editingRedemption.id}`);
     const { success, message, data } = res.data;
     if (success) {
-      setInputs(data);
+      if (data.expired_time === 0) {
+        data.expired_time = null;
+      } else {
+        data.expired_time = new Date(data.expired_time * 1000);
+      }
+      formApiRef.current?.setValues({ ...getInitValues(), ...data });
     } else {
       showError(message);
     }
@@ -62,26 +67,30 @@ const EditRedemption = (props) => {
   };
 
   useEffect(() => {
-    if (isEdit) {
-      loadRedemption().then(() => {
-        // console.log(inputs);
-      });
-    } else {
-      setInputs(originInputs);
+    if (formApiRef.current) {
+      if (isEdit) {
+        loadRedemption();
+      } else {
+        formApiRef.current.setValues(getInitValues());
+      }
     }
   }, [props.editingRedemption.id]);
 
-  const submit = async () => {
-    let name = inputs.name;
-    if (!isEdit && inputs.name === '') {
-      // set default name
-      name = renderQuota(quota);
+  const submit = async (values) => {
+    let name = values.name;
+    if (!isEdit && (!name || name === '')) {
+      name = renderQuota(values.quota);
     }
     setLoading(true);
-    let localInputs = inputs;
-    localInputs.count = parseInt(localInputs.count);
-    localInputs.quota = parseInt(localInputs.quota);
+    let localInputs = { ...values };
+    localInputs.count = parseInt(localInputs.count) || 0;
+    localInputs.quota = parseInt(localInputs.quota) || 0;
     localInputs.name = name;
+    if (!localInputs.expired_time) {
+      localInputs.expired_time = 0;
+    } else {
+      localInputs.expired_time = Math.floor(localInputs.expired_time.getTime() / 1000);
+    }
     let res;
     if (isEdit) {
       res = await API.put(`/api/redemption/`, {
@@ -101,8 +110,8 @@ const EditRedemption = (props) => {
         props.handleClose();
       } else {
         showSuccess(t('兑换码创建成功！'));
-        setInputs(originInputs);
         props.refresh();
+        formApiRef.current?.setValues(getInitValues());
         props.handleClose();
       }
     } else {
@@ -122,7 +131,7 @@ const EditRedemption = (props) => {
           </div>
         ),
         onOk: () => {
-          downloadTextAsFile(text, `${inputs.name}.txt`);
+          downloadTextAsFile(text, `${localInputs.name}.txt`);
         },
       });
     }
@@ -134,24 +143,35 @@ const EditRedemption = (props) => {
       <SideSheet
         placement={isEdit ? 'right' : 'left'}
         title={
-          <Title level={3}>
-            {isEdit ? t('更新兑换码信息') : t('创建新的兑换码')}
-          </Title>
+          <Space>
+            {isEdit ?
+              <Tag color="blue" shape="circle">{t('更新')}</Tag> :
+              <Tag color="green" shape="circle">{t('新建')}</Tag>
+            }
+            <Title heading={4} className="m-0">
+              {isEdit ? t('更新兑换码信息') : t('创建新的兑换码')}
+            </Title>
+          </Space>
         }
-        headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        bodyStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
+        bodyStyle={{ padding: '0' }}
         visible={props.visiable}
+        width={isMobile() ? '100%' : 600}
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="flex justify-end bg-white">
             <Space>
-              <Button theme='solid' size={'large'} onClick={submit}>
+              <Button
+                theme="solid"
+                onClick={() => formApiRef.current?.submitForm()}
+                icon={<IconSave />}
+                loading={loading}
+              >
                 {t('提交')}
               </Button>
               <Button
-                theme='solid'
-                size={'large'}
-                type={'tertiary'}
+                theme="light"
+                type="primary"
                 onClick={handleCancel}
+                icon={<IconClose />}
               >
                 {t('取消')}
               </Button>
@@ -160,59 +180,121 @@ const EditRedemption = (props) => {
         }
         closeIcon={null}
         onCancel={() => handleCancel()}
-        width={isMobile() ? '100%' : 600}
       >
         <Spin spinning={loading}>
-          <Input
-            style={{ marginTop: 20 }}
-            label={t('名称')}
-            name='name'
-            placeholder={t('请输入名称')}
-            onChange={(value) => handleInputChange('name', value)}
-            value={name}
-            autoComplete='new-password'
-            required={!isEdit}
-          />
-          <Divider />
-          <div style={{ marginTop: 20 }}>
-            <Typography.Text>
-              {t('额度') + renderQuotaWithPrompt(quota)}
-            </Typography.Text>
-          </div>
-          <AutoComplete
-            style={{ marginTop: 8 }}
-            name='quota'
-            placeholder={t('请输入额度')}
-            onChange={(value) => handleInputChange('quota', value)}
-            value={quota}
-            autoComplete='new-password'
-            type='number'
-            position={'bottom'}
-            data={[
-              { value: 500000, label: '1$' },
-              { value: 5000000, label: '10$' },
-              { value: 25000000, label: '50$' },
-              { value: 50000000, label: '100$' },
-              { value: 250000000, label: '500$' },
-              { value: 500000000, label: '1000$' },
-            ]}
-          />
-          {!isEdit && (
-            <>
-              <Divider />
-              <Typography.Text>{t('生成数量')}</Typography.Text>
-              <Input
-                style={{ marginTop: 8 }}
-                label={t('生成数量')}
-                name='count'
-                placeholder={t('请输入生成数量')}
-                onChange={(value) => handleInputChange('count', value)}
-                value={count}
-                autoComplete='new-password'
-                type='number'
-              />
-            </>
-          )}
+          <Form
+            initValues={getInitValues()}
+            getFormApi={(api) => formApiRef.current = api}
+            onSubmit={submit}
+          >
+            {({ values }) => (
+              <div className="p-2">
+                <Card className="!rounded-2xl shadow-sm border-0 mb-6">
+                  {/* Header: Basic Info */}
+                  <div className="flex items-center mb-2">
+                    <Avatar size="small" color="blue" className="mr-2 shadow-md">
+                      <IconGift size={16} />
+                    </Avatar>
+                    <div>
+                      <Text className="text-lg font-medium">{t('基本信息')}</Text>
+                      <div className="text-xs text-gray-600">{t('设置兑换码的基本信息')}</div>
+                    </div>
+                  </div>
+
+                  <Row gutter={12}>
+                    <Col span={24}>
+                      <Form.Input
+                        field='name'
+                        label={t('名称')}
+                        placeholder={t('请输入名称')}
+                        style={{ width: '100%' }}
+                        rules={!isEdit ? [] : [{ required: true, message: t('请输入名称') }]}
+                        showClear
+                      />
+                    </Col>
+                    <Col span={24}>
+                      <Form.DatePicker
+                        field='expired_time'
+                        label={t('过期时间')}
+                        type='dateTime'
+                        placeholder={t('选择过期时间（可选，留空为永久）')}
+                        style={{ width: '100%' }}
+                        showClear
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+
+                <Card className="!rounded-2xl shadow-sm border-0">
+                  {/* Header: Quota Settings */}
+                  <div className="flex items-center mb-2">
+                    <Avatar size="small" color="green" className="mr-2 shadow-md">
+                      <IconCreditCard size={16} />
+                    </Avatar>
+                    <div>
+                      <Text className="text-lg font-medium">{t('额度设置')}</Text>
+                      <div className="text-xs text-gray-600">{t('设置兑换码的额度和数量')}</div>
+                    </div>
+                  </div>
+
+                  <Row gutter={12}>
+                    <Col span={12}>
+                      <Form.AutoComplete
+                        field='quota'
+                        label={t('额度')}
+                        placeholder={t('请输入额度')}
+                        style={{ width: '100%' }}
+                        type='number'
+                        rules={[
+                          { required: true, message: t('请输入额度') },
+                          {
+                            validator: (rule, v) => {
+                              const num = parseInt(v, 10);
+                              return num > 0
+                                ? Promise.resolve()
+                                : Promise.reject(t('额度必须大于0'));
+                            },
+                          },
+                        ]}
+                        extraText={renderQuotaWithPrompt(Number(values.quota) || 0)}
+                        data={[
+                          { value: 500000, label: '1$' },
+                          { value: 5000000, label: '10$' },
+                          { value: 25000000, label: '50$' },
+                          { value: 50000000, label: '100$' },
+                          { value: 250000000, label: '500$' },
+                          { value: 500000000, label: '1000$' },
+                        ]}
+                        showClear
+                      />
+                    </Col>
+                    {!isEdit && (
+                      <Col span={12}>
+                        <Form.InputNumber
+                          field='count'
+                          label={t('生成数量')}
+                          min={1}
+                          rules={[
+                            { required: true, message: t('请输入生成数量') },
+                            {
+                              validator: (rule, v) => {
+                                const num = parseInt(v, 10);
+                                return num > 0
+                                  ? Promise.resolve()
+                                  : Promise.reject(t('生成数量必须大于0'));
+                              },
+                            },
+                          ]}
+                          style={{ width: '100%' }}
+                          showClear
+                        />
+                      </Col>
+                    )}
+                  </Row>
+                </Card>
+              </div>
+            )}
+          </Form>
         </Spin>
       </SideSheet>
     </>

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"one-api/common"
+	"one-api/constant"
 	"one-api/dto"
+	"one-api/relay/channel/openrouter"
 	relaycommon "one-api/relay/common"
 	"strings"
 )
@@ -18,10 +20,24 @@ func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.Re
 		Stream:      claudeRequest.Stream,
 	}
 
-	if claudeRequest.Thinking != nil {
-		if strings.HasSuffix(info.OriginModelName, "-thinking") &&
-			!strings.HasSuffix(claudeRequest.Model, "-thinking") {
-			openAIRequest.Model = openAIRequest.Model + "-thinking"
+	isOpenRouter := info.ChannelType == constant.ChannelTypeOpenRouter
+
+	if claudeRequest.Thinking != nil && claudeRequest.Thinking.Type == "enabled" {
+		if isOpenRouter {
+			reasoning := openrouter.RequestReasoning{
+				MaxTokens: claudeRequest.Thinking.GetBudgetTokens(),
+			}
+			reasoningJSON, err := json.Marshal(reasoning)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal reasoning: %w", err)
+			}
+			openAIRequest.Reasoning = reasoningJSON
+		} else {
+			thinkingSuffix := "-thinking"
+			if strings.HasSuffix(info.OriginModelName, thinkingSuffix) &&
+				!strings.HasSuffix(openAIRequest.Model, thinkingSuffix) {
+				openAIRequest.Model = openAIRequest.Model + thinkingSuffix
+			}
 		}
 	}
 
@@ -62,16 +78,30 @@ func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.Re
 		} else {
 			systems := claudeRequest.ParseSystem()
 			if len(systems) > 0 {
-				systemStr := ""
 				openAIMessage := dto.Message{
 					Role: "system",
 				}
-				for _, system := range systems {
-					if system.Text != nil {
-						systemStr += *system.Text
+				isOpenRouterClaude := isOpenRouter && strings.HasPrefix(info.UpstreamModelName, "anthropic/claude")
+				if isOpenRouterClaude {
+					systemMediaMessages := make([]dto.MediaContent, 0, len(systems))
+					for _, system := range systems {
+						message := dto.MediaContent{
+							Type:         "text",
+							Text:         system.GetText(),
+							CacheControl: system.CacheControl,
+						}
+						systemMediaMessages = append(systemMediaMessages, message)
 					}
+					openAIMessage.SetMediaContent(systemMediaMessages)
+				} else {
+					systemStr := ""
+					for _, system := range systems {
+						if system.Text != nil {
+							systemStr += *system.Text
+						}
+					}
+					openAIMessage.SetStringContent(systemStr)
 				}
-				openAIMessage.SetStringContent(systemStr)
 				openAIMessages = append(openAIMessages, openAIMessage)
 			}
 		}
@@ -97,8 +127,9 @@ func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.Re
 				switch mediaMsg.Type {
 				case "text":
 					message := dto.MediaContent{
-						Type: "text",
-						Text: mediaMsg.GetText(),
+						Type:         "text",
+						Text:         mediaMsg.GetText(),
+						CacheControl: mediaMsg.CacheControl,
 					}
 					mediaMessages = append(mediaMessages, message)
 				case "image":
@@ -246,12 +277,15 @@ func StreamResponseOpenAI2Claude(openAIResponse *dto.ChatCompletionsStreamRespon
 		}
 		if info.Done {
 			claudeResponses = append(claudeResponses, generateStopBlock(info.ClaudeConvertInfo.Index))
-			if info.ClaudeConvertInfo.Usage != nil {
+			oaiUsage := info.ClaudeConvertInfo.Usage
+			if oaiUsage != nil {
 				claudeResponses = append(claudeResponses, &dto.ClaudeResponse{
 					Type: "message_delta",
 					Usage: &dto.ClaudeUsage{
-						InputTokens:  info.ClaudeConvertInfo.Usage.PromptTokens,
-						OutputTokens: info.ClaudeConvertInfo.Usage.CompletionTokens,
+						InputTokens:              oaiUsage.PromptTokens,
+						OutputTokens:             oaiUsage.CompletionTokens,
+						CacheCreationInputTokens: oaiUsage.PromptTokensDetails.CachedCreationTokens,
+						CacheReadInputTokens:     oaiUsage.PromptTokensDetails.CachedTokens,
 					},
 					Delta: &dto.ClaudeMediaMessage{
 						StopReason: common.GetPointer[string](stopReasonOpenAI2Claude(info.FinishReason)),

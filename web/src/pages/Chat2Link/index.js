@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTokenKeys } from '../../components/fetchTokenKeys';
+import { useTokenKeys } from '../../hooks/useTokenKeys';
 
 const chat2page = () => {
   const { keys, chatLink, serverAddress, isLoading } = useTokenKeys();
@@ -17,7 +17,7 @@ const chat2page = () => {
   }
 
   return (
-    <div>
+    <div className="mt-[64px]">
       <h3>正在加载，请稍候...</h3>
     </div>
   );
