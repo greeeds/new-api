@@ -39,7 +39,6 @@ func main() {
 		return
 	}
 
-	common.SetupLogger()
 	common.SysLog("BaiPiao API " + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
@@ -69,9 +68,9 @@ func main() {
 				if r := recover(); r != nil {
 					common.SysError(fmt.Sprintf("InitChannelCache panic: %v, retrying once", r))
 					// Retry once
-					_, fixErr := model.FixAbility()
+					_, _, fixErr := model.FixAbility()
 					if fixErr != nil {
-						common.SysError(fmt.Sprintf("InitChannelCache failed: %s", fixErr.Error()))
+						common.FatalLog(fmt.Sprintf("InitChannelCache failed: %s", fixErr.Error()))
 					}
 				}
 			}()
@@ -171,6 +170,8 @@ func InitResources() error {
 
 	// 加载环境变量
 	common.InitEnv()
+
+	common.SetupLogger()
 
 	// Initialize model settings
 	ratio_setting.InitRatioSettings()
