@@ -145,8 +145,22 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 			milliseconds := tok.Sub(tik).Milliseconds()
 			consumedTime := float64(milliseconds) / 1000.0
 			err := service.RelayErrorHandler(httpResp, true)
-			model.RecordConsumeLog(c, 1, channel.Id, 0, 0, testModel, "模型测试",
-				0, "模型测试:"+err.Error.Message, 0, 0, int(consumedTime), false, "default", make(map[string]interface{}), bodyContent)
+			model.RecordConsumeLog(c, 1, model.RecordConsumeLogParams{
+				ChannelId:        channel.Id,
+				PromptTokens:     0,
+				CompletionTokens: 0,
+				ModelName:        testModel,
+				TokenName:        "模型测试",
+				Quota:            0,
+				Content:          "模型测试:" + err.Error.Message,
+				TokenId:          0,
+				UserQuota:        0,
+				UseTimeSeconds:   int(consumedTime),
+				IsStream:         false,
+				Group:            "default",
+				Other:            make(map[string]interface{}),
+				Body:             bodyContent,
+			})
 			return fmt.Errorf("status code %d: %s", httpResp.StatusCode, err.Error.Message), err
 		}
 	}
@@ -192,7 +206,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 		IsStream:         false,
 		Group:            info.UsingGroup,
 		Other:            other,
-		BodyContent:      bodyContent,
+		Body:             bodyContent,
 	})
 	common.SysLog(fmt.Sprintf("testing channel #%d, response: \n%s", channel.Id, string(respBody)))
 	return nil, nil

@@ -63,6 +63,7 @@ func ResponsesHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		}
 	}
 
+	sourceModel := relayInfo.OriginModelName
 	err = helper.ModelMappedHelper(c, relayInfo, req)
 	if err != nil {
 		return service.OpenAIErrorWrapperLocal(err, "model_mapped_error", http.StatusBadRequest)
@@ -96,11 +97,13 @@ func ResponsesHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 	}
 	adaptor.Init(relayInfo)
 	var requestBody io.Reader
+	var bodyContent string
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
 			return service.OpenAIErrorWrapperLocal(err, "get_request_body_error", http.StatusInternalServerError)
 		}
+		bodyContent = string(body)
 		requestBody = bytes.NewBuffer(body)
 	} else {
 		convertedRequest, err := adaptor.ConvertOpenAIResponsesRequest(c, relayInfo, *req)
@@ -130,6 +133,7 @@ func ResponsesHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
 		}
+		bodyContent = string(jsonData)
 		requestBody = bytes.NewBuffer(jsonData)
 	}
 
@@ -162,7 +166,7 @@ func ResponsesHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) 
 	if strings.HasPrefix(relayInfo.OriginModelName, "gpt-4o-audio") {
 		service.PostAudioConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
 	} else {
-		postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
+		postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "", sourceModel, bodyContent)
 	}
 	return nil
 }

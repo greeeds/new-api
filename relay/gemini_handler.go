@@ -123,7 +123,7 @@ func GeminiHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			return service.OpenAIErrorWrapperLocal(err, "check_request_sensitive_error", http.StatusBadRequest)
 		}
 	}
-
+	sourceModel := relayInfo.OriginModelName
 	// model mapped 模型映射
 	err = helper.ModelMappedHelper(c, relayInfo, req)
 	if err != nil {
@@ -228,6 +228,7 @@ func GeminiHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		return openaiErr
 	}
 
-	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "")
+	bodyContent := string(requestBody)
+	postConsumeQuota(c, relayInfo, usage.(*dto.Usage), preConsumedQuota, userQuota, priceData, "", sourceModel, bodyContent)
 	return nil
 }

@@ -127,7 +127,7 @@ const EditChannel = (props) => {
       Modal.confirm({
         title: '警告',
         content:
-          '不需要在末尾加/v1，New API会自动处理，添加后可能导致请求失败，是否继续？',
+          '不需要在末尾加/v1，BaiPiao API会自动处理，添加后可能导致请求失败，是否继续？',
         onOk: () => {
           setInputs((inputs) => ({ ...inputs, [name]: value }));
         },
@@ -670,7 +670,7 @@ const EditChannel = (props) => {
                     <>
                       <Banner
                         type='warning'
-                        description={t('如果你对接的是上游One API或者New API等转发项目，请使用OpenAI类型，不要使用此类型，除非你知道你在做什么。')}
+                        description={t('如果你对接的是上游One API或者BaiPiao API等转发项目，请使用OpenAI类型，不要使用此类型，除非你知道你在做什么。')}
                         className='!rounded-lg'
                       />
                       <div>

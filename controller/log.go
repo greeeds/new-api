@@ -34,9 +34,7 @@ func GetAllLogs(c *gin.Context) {
 		})
 		return
 	}
-	if !model.IsRoot(userId) {
-		logBody(logs)
-	}
+	hideNotRoot(userId, logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -76,7 +74,7 @@ func GetUserLogs(c *gin.Context) {
 		})
 		return
 	}
-	logBody(logs)
+	hideNotRoot(userId, logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -101,9 +99,7 @@ func SearchAllLogs(c *gin.Context) {
 		})
 		return
 	}
-	if !model.IsRoot(userId) {
-		logBody(logs)
-	}
+	hideNotRoot(userId, logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -123,7 +119,7 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
-	logBody(logs)
+	hideNotRoot(userId, logs)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -143,9 +139,7 @@ func GetLogByKey(c *gin.Context) {
 		})
 		return
 	}
-	if !model.IsRoot(userId) {
-		logBody(logs)
-	}
+	hideNotRoot(userId, logs)
 	c.JSON(200, gin.H{
 		"success": true,
 		"message": "",
@@ -225,8 +219,20 @@ func DeleteHistoryLogs(c *gin.Context) {
 	return
 }
 
-func logBody(logs []*model.Log) {
+func hideNotRoot(userId int, logs []*model.Log) {
+	if model.IsRoot(userId) {
+		return
+	}
+	needRecordIp := false
+	if settingMap, err := model.GetUserSetting(userId, false); err == nil {
+		if settingMap.RecordIpLog {
+			needRecordIp = true
+		}
+	}
 	for i := range logs {
 		logs[i].Body = ""
+		if !needRecordIp {
+			logs[i].Ip = ""
+		}
 	}
 }

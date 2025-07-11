@@ -230,6 +230,7 @@ func RelaySwapFace(c *gin.Context) *dto.MidjourneyResponse {
 				UserQuota: userQuota,
 				Group:     relayInfo.UsingGroup,
 				Other:     other,
+				Body:      "",
 			})
 			model.UpdateUserUsedQuotaAndRequestCount(userId, priceData.Quota)
 			model.UpdateChannelUsedQuota(channelId, priceData.Quota)

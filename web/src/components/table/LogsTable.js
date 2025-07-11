@@ -1100,9 +1100,17 @@ const LogsTable = () => {
         }
       }
       if (logs[i].body && isRoot()) {
+        const JsonDisplay = ({ jsonString }) => {
+          try {
+            const formattedJson = JSON.stringify(JSON.parse(jsonString), null, 2);
+            return <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{formattedJson}</pre>;
+          } catch (e) {
+            return <span>{jsonString}</span>;
+          }
+        };
         expandDataLocal.push({
           key: t('请求参数'),
-          value: logs[i].body
+          value: <JsonDisplay jsonString={logs[i].body} />
         });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
