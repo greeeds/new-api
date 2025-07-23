@@ -228,7 +228,7 @@ func ImageHelper(c *gin.Context) (newAPIError *types.NewAPIError) {
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, 0, userQuota, priceData, newAPIError.Error.Message, sourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, nil, 0, userQuota, priceData, newAPIError.Err.Error(), sourceModel, bodyContent)
 			return newAPIError
 		}
 	}

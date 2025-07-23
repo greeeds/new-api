@@ -227,7 +227,7 @@ func TextHelper(c *gin.Context) (newAPIError *types.NewAPIError) {
 			newApiErr = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newApiErr.Error.Message, sourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newApiErr.Err.Error(), sourceModel, bodyContent)
 			return newApiErr
 		}
 	}

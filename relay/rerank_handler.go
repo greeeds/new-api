@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"one-api/common"
@@ -104,7 +105,7 @@ func RerankHelper(c *gin.Context, relayMode int) (newAPIError *types.NewAPIError
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newAPIError.Error.Message, sourceModel, bodyContent)
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newAPIError.Err.Error(), sourceModel, bodyContent)
 			return newAPIError
 		}
 	}

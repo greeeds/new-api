@@ -120,7 +120,7 @@ func AudioHelper(c *gin.Context) (newAPIError *types.NewAPIError) {
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newAPIError.Error.Message, sourceModel, "")
+			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newAPIError.Err.Error(), sourceModel, "")
 			return newAPIError
 		}
 	}
