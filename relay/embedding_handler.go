@@ -55,11 +55,7 @@ func EmbeddingHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	}
 
 	var bodyContent string
-	bodyContent = ""
-	jsonData, err = json.Marshal(embeddingRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
-	}
+	bodyContent = string(jsonData)
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
@@ -67,7 +63,7 @@ func EmbeddingHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, preConsumedQuota, userQuota, priceData, newAPIError.Err.Error(), sourceModel, bodyContent)
+			postConsumeQuota(c, info, nil, "", bodyContent)
 			return newAPIError
 		}
 	}
@@ -78,6 +74,6 @@ func EmbeddingHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 		return newAPIError
 	}
-	postConsumeQuota(c, info, usage.(*dto.Usage), "")
+	postConsumeQuota(c, info, usage.(*dto.Usage), "", bodyContent)
 	return nil
 }

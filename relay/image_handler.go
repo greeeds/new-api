@@ -43,13 +43,14 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	adaptor.Init(info)
 
 	var requestBody io.Reader
-
+	bodyContent := ""
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
 			return types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		requestBody = bytes.NewBuffer(body)
+		bodyContent = string(body)
 	} else {
 		convertedRequest, err := adaptor.ConvertImageRequest(c, info, *request)
 		if err != nil {
@@ -59,6 +60,10 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 		switch convertedRequest.(type) {
 		case *bytes.Buffer:
 			requestBody = convertedRequest.(io.Reader)
+			bodyBytes, err := io.ReadAll(requestBody)
+			if err == nil {
+				bodyContent = string(bodyBytes)
+			}
 		default:
 			jsonData, err := common.Marshal(convertedRequest)
 			if err != nil {
@@ -77,6 +82,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 				logger.LogDebug(c, fmt.Sprintf("image request body: %s", string(jsonData)))
 			}
 			requestBody = bytes.NewBuffer(jsonData)
+			bodyContent = string(jsonData)
 		}
 	}
 
@@ -86,12 +92,6 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	if err != nil {
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
-	var bodyContent string
-	bodyContent = ""
-	jsonData, err := json.Marshal(imageRequest)
-	if err == nil {
-		bodyContent = string(jsonData)
-	}
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
@@ -100,7 +100,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, relayInfo, nil, 0, userQuota, priceData, newAPIError.Err.Error(), sourceModel, bodyContent)
+			postConsumeQuota(c, info, nil, "", bodyContent)
 			return newAPIError
 		}
 	}
@@ -130,6 +130,6 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 		logContent = fmt.Sprintf("大小 %s, 品质 %s", request.Size, quality)
 	}
 
-	postConsumeQuota(c, info, usage.(*dto.Usage), logContent)
+	postConsumeQuota(c, info, usage.(*dto.Usage), logContent, bodyContent)
 	return nil
 }

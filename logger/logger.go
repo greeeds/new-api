@@ -116,11 +116,3 @@ func LogJson(ctx context.Context, msg string, obj any) {
 	}
 	LogInfo(ctx, fmt.Sprintf("%s | %s", msg, string(jsonStr)))
 }
-
-func LogQuotaF(quota float64) string {
-	if DisplayInCurrencyEnabled {
-		return fmt.Sprintf("＄%.6f 额度", quota/QuotaPerUnit)
-	} else {
-		return fmt.Sprintf("%d 点额度", int64(quota))
-	}
-}
