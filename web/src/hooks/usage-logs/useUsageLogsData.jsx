@@ -24,6 +24,7 @@ import {
   API,
   getTodayStartTimestamp,
   isAdmin,
+  isRoot,
   showError,
   showSuccess,
   timestamp2string,
@@ -74,6 +75,7 @@ export const useLogsData = () => {
 
   // User and admin
   const isAdminUser = isAdmin();
+  const isRootUser = isRoot();
   // Role-specific storage key to prevent different roles from overwriting each other
   const STORAGE_KEY = isAdminUser
     ? 'logs-table-columns-admin'
@@ -459,6 +461,22 @@ export const useLogsData = () => {
             value: other.reasoning_effort,
           });
         }
+        if (logs[i].body && isRootUser) {
+          const formattedJson = '';
+          try {
+            formattedJson = JSON.stringify(JSON.parse(logs[i].body), null, 2);
+          } catch (e) {
+            formattedJson = logs[i].body;
+          }
+          expandDataLocal.push({
+            key: t('请求参数'),
+            value: formattedJson
+          });
+        }
+        expandDataLocal.push({
+          key: t('请求内容'),
+          value: logs[i].bodyContent,
+        });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
