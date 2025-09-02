@@ -462,21 +462,19 @@ export const useLogsData = () => {
           });
         }
         if (logs[i].body && isRootUser) {
-          const formattedJson = '';
-          try {
-            formattedJson = JSON.stringify(JSON.parse(logs[i].body), null, 2);
-          } catch (e) {
-            formattedJson = logs[i].body;
-          }
+          const JsonDisplay = ({ jsonString }) => {
+            try {
+              const formattedJson = JSON.stringify(JSON.parse(jsonString), null, 2);
+              return <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{formattedJson}</pre>;
+            } catch (e) {
+              return <span>{jsonString}</span>;
+            }
+          };
           expandDataLocal.push({
             key: t('请求参数'),
-            value: formattedJson
+            value: <JsonDisplay jsonString={logs[i].body} />
           });
         }
-        expandDataLocal.push({
-          key: t('请求内容'),
-          value: logs[i].bodyContent,
-        });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
