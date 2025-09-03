@@ -55,16 +55,20 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	geminiReq, ok := info.Request.(*dto.GeminiChatRequest)
 	if !ok {
-		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected *dto.GeminiChatRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected *dto.GeminiChatRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 
 	request, err := common.DeepCopy(geminiReq)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(fmt.Errorf("failed to copy request to GeminiChatRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 	// model mapped 模型映射
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
@@ -88,7 +92,9 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
-		return types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 
 	adaptor.Init(info)
@@ -111,6 +117,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 			return types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		requestBody = bytes.NewReader(body)
@@ -119,10 +126,12 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		// 使用 ConvertGeminiRequest 转换请求格式
 		convertedRequest, err := adaptor.ConvertGeminiRequest(c, info, request)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 		jsonData, err := common.Marshal(convertedRequest)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 
@@ -130,6 +139,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride)
 			if err != nil {
+				postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 				return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
 			}
 		}
@@ -143,6 +153,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
 		logger.LogError(c, "Do gemini request failed: "+err.Error())
+		postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 
@@ -156,6 +167,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
+			postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
 			return newAPIError
 		}
 	}
@@ -163,6 +175,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	usage, openaiErr := adaptor.DoResponse(c, resp.(*http.Response), info)
 	if openaiErr != nil {
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+		postConsumeQuota(c, info, usage.(*dto.Usage), openaiErr.Err.Error(), bodyContent)
 		return openaiErr
 	}
 

@@ -22,22 +22,28 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 
 	responsesReq, ok := info.Request.(*dto.OpenAIResponsesRequest)
 	if !ok {
-		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.OpenAIResponsesRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.OpenAIResponsesRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 
 	request, err := common.DeepCopy(responsesReq)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(fmt.Errorf("failed to copy request to GeneralOpenAIRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
-		return types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 	adaptor.Init(info)
 	var requestBody io.Reader
@@ -45,6 +51,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), "")
 			return types.NewError(err, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
 		}
 		bodyContent = string(body)
@@ -52,16 +59,19 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	} else {
 		convertedRequest, err := adaptor.ConvertOpenAIResponsesRequest(c, info, *request)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), "")
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 		jsonData, err := common.Marshal(convertedRequest)
 		if err != nil {
+			postConsumeQuota(c, info, nil, err.Error(), "")
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 		// apply param override
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride)
 			if err != nil {
+				postConsumeQuota(c, info, nil, err.Error(), "")
 				return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
 			}
 		}
@@ -76,6 +86,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 
@@ -88,6 +99,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
+			postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
 			return newAPIError
 		}
 	}
@@ -96,11 +108,12 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	if newAPIError != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
+		postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
 		return newAPIError
 	}
 
 	if strings.HasPrefix(info.OriginModelName, "gpt-4o-audio") {
-		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), "")
+		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), bodyContent)
 	} else {
 		postConsumeQuota(c, info, usage.(*dto.Usage), "", bodyContent)
 	}

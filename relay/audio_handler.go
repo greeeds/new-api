@@ -19,32 +19,40 @@ func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 	audioReq, ok := info.Request.(*dto.AudioRequest)
 	if !ok {
-		return types.NewError(errors.New("invalid request type"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewError(errors.New("invalid request type"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 
 	request, err := common.DeepCopy(audioReq)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(fmt.Errorf("failed to copy request to AudioRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
-		return types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		return newApiErr
 	}
 	adaptor.Init(info)
 
 	ioReader, err := adaptor.ConvertAudioRequest(c, info, *request)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 	}
 
 	resp, err := adaptor.DoRequest(c, info, ioReader)
 	if err != nil {
+		postConsumeQuota(c, info, nil, err.Error(), "")
 		return types.NewError(err, types.ErrorCodeDoRequestFailed)
 	}
 	statusCodeMappingStr := c.GetString("status_code_mapping")
@@ -56,7 +64,7 @@ func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 			newAPIError = service.RelayErrorHandler(httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, info, nil, "", "")
+			postConsumeQuota(c, info, nil, newAPIError.Err.Error(), "")
 			return newAPIError
 		}
 	}
@@ -65,6 +73,7 @@ func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	if newAPIError != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
+		postConsumeQuota(c, info, nil, newAPIError.Err.Error(), "")
 		return newAPIError
 	}
 
