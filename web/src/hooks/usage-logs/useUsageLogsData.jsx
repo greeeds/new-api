@@ -462,6 +462,10 @@ export const useLogsData = () => {
           });
         }
         if (logs[i].body && isRootUser) {
+          expandDataLocal.push({
+            key: t('扩展日志'),
+            value: logs[i].content
+          });
           const JsonDisplay = ({ jsonString }) => {
             try {
               const formattedJson = JSON.stringify(JSON.parse(jsonString), null, 2);
