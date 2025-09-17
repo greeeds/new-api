@@ -170,7 +170,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		httpResp = resp.(*http.Response)
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
-			newApiErr := service.RelayErrorHandler(httpResp, false)
+			newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 			postConsumeQuota(c, info, nil, newApiErr.Err.Error(), bodyContent)
@@ -209,6 +209,8 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 	imageTokens := usage.PromptTokensDetails.ImageTokens
 	audioTokens := usage.PromptTokensDetails.AudioTokens
 	completionTokens := usage.CompletionTokens
+	cachedCreationTokens := usage.PromptTokensDetails.CachedCreationTokens
+
 	modelName := relayInfo.OriginModelName
 
 	tokenName := ctx.GetString("token_name")
@@ -218,6 +220,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 	modelRatio := relayInfo.PriceData.ModelRatio
 	groupRatio := relayInfo.PriceData.GroupRatioInfo.GroupRatio
 	modelPrice := relayInfo.PriceData.ModelPrice
+	cachedCreationRatio := relayInfo.PriceData.CacheCreationRatio
 
 	// Convert values to decimal for precise calculation
 	dPromptTokens := decimal.NewFromInt(int64(promptTokens))
@@ -225,12 +228,14 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 	dImageTokens := decimal.NewFromInt(int64(imageTokens))
 	dAudioTokens := decimal.NewFromInt(int64(audioTokens))
 	dCompletionTokens := decimal.NewFromInt(int64(completionTokens))
+	dCachedCreationTokens := decimal.NewFromInt(int64(cachedCreationTokens))
 	dCompletionRatio := decimal.NewFromFloat(completionRatio)
 	dCacheRatio := decimal.NewFromFloat(cacheRatio)
 	dImageRatio := decimal.NewFromFloat(imageRatio)
 	dModelRatio := decimal.NewFromFloat(modelRatio)
 	dGroupRatio := decimal.NewFromFloat(groupRatio)
 	dModelPrice := decimal.NewFromFloat(modelPrice)
+	dCachedCreationRatio := decimal.NewFromFloat(cachedCreationRatio)
 	dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 
 	ratio := dModelRatio.Mul(dGroupRatio)
@@ -285,6 +290,13 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 				fileSearchTool.CallCount, dFileSearchQuota.String())
 		}
 	}
+	var dImageGenerationCallQuota decimal.Decimal
+	var imageGenerationCallPrice float64
+	if ctx.GetBool("image_generation_call") {
+		imageGenerationCallPrice = operation_setting.GetGPTImage1PriceOnceCall(ctx.GetString("image_generation_call_quality"), ctx.GetString("image_generation_call_size"))
+		dImageGenerationCallQuota = decimal.NewFromFloat(imageGenerationCallPrice).Mul(dGroupRatio).Mul(dQuotaPerUnit)
+		extraContent += fmt.Sprintf("Image Generation Call 花费 %s", dImageGenerationCallQuota.String())
+	}
 
 	var quotaCalculateDecimal decimal.Decimal
 
@@ -297,6 +309,11 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 		if !dCacheTokens.IsZero() {
 			baseTokens = baseTokens.Sub(dCacheTokens)
 			cachedTokensWithRatio = dCacheTokens.Mul(dCacheRatio)
+		}
+		var dCachedCreationTokensWithRatio decimal.Decimal
+		if !dCachedCreationTokens.IsZero() {
+			baseTokens = baseTokens.Sub(dCachedCreationTokens)
+			dCachedCreationTokensWithRatio = dCachedCreationTokens.Mul(dCachedCreationRatio)
 		}
 
 		// 减去 image tokens
@@ -316,7 +333,9 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 				extraContent += fmt.Sprintf("Audio Input 花费 %s", audioInputQuota.String())
 			}
 		}
-		promptQuota := baseTokens.Add(cachedTokensWithRatio).Add(imageTokensWithRatio)
+		promptQuota := baseTokens.Add(cachedTokensWithRatio).
+			Add(imageTokensWithRatio).
+			Add(dCachedCreationTokensWithRatio)
 
 		completionQuota := dCompletionTokens.Mul(dCompletionRatio)
 
@@ -328,22 +347,13 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 	} else {
 		quotaCalculateDecimal = dModelPrice.Mul(dQuotaPerUnit).Mul(dGroupRatio)
 	}
-	var dGeminiImageOutputQuota decimal.Decimal
-	var imageOutputPrice float64
-	if strings.HasPrefix(modelName, "gemini-2.5-flash-image-preview") {
-		imageOutputPrice = operation_setting.GetGeminiImageOutputPricePerMillionTokens(modelName)
-		if imageOutputPrice > 0 {
-			dImageOutputTokens := decimal.NewFromInt(int64(ctx.GetInt("gemini_image_tokens")))
-			dGeminiImageOutputQuota = decimal.NewFromFloat(imageOutputPrice).Div(decimal.NewFromInt(1000000)).Mul(dImageOutputTokens).Mul(dGroupRatio).Mul(dQuotaPerUnit)
-		}
-	}
 	// 添加 responses tools call 调用的配额
 	quotaCalculateDecimal = quotaCalculateDecimal.Add(dWebSearchQuota)
 	quotaCalculateDecimal = quotaCalculateDecimal.Add(dFileSearchQuota)
 	// 添加 audio input 独立计费
 	quotaCalculateDecimal = quotaCalculateDecimal.Add(audioInputQuota)
-	// 添加 Gemini image output 计费
-	quotaCalculateDecimal = quotaCalculateDecimal.Add(dGeminiImageOutputQuota)
+	// 添加 image generation call 计费
+	quotaCalculateDecimal = quotaCalculateDecimal.Add(dImageGenerationCallQuota)
 
 	quota := int(quotaCalculateDecimal.Round(0).IntPart())
 	totalTokens := promptTokens + completionTokens
@@ -409,6 +419,10 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 		other["image_ratio"] = imageRatio
 		other["image_output"] = imageTokens
 	}
+	if cachedCreationTokens != 0 {
+		other["cache_creation_tokens"] = cachedCreationTokens
+		other["cache_creation_ratio"] = cachedCreationRatio
+	}
 	if !dWebSearchQuota.IsZero() {
 		if relayInfo.ResponsesUsageInfo != nil {
 			if webSearchTool, exists := relayInfo.ResponsesUsageInfo.BuiltInTools[dto.BuildInToolWebSearchPreview]; exists {
@@ -438,9 +452,9 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 		other["audio_input_token_count"] = audioTokens
 		other["audio_input_price"] = audioInputPrice
 	}
-	if !dGeminiImageOutputQuota.IsZero() {
-		other["image_output_token_count"] = ctx.GetInt("gemini_image_tokens")
-		other["image_output_price"] = imageOutputPrice
+	if !dImageGenerationCallQuota.IsZero() {
+		other["image_generation_call"] = true
+		other["image_generation_call_price"] = imageGenerationCallPrice
 	}
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
