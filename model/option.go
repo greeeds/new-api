@@ -1,15 +1,16 @@
 package model
 
 import (
-	"one-api/common"
-	"one-api/setting"
-	"one-api/setting/config"
-	"one-api/setting/operation_setting"
-	"one-api/setting/ratio_setting"
-	"one-api/setting/system_setting"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/config"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
 type Option struct {
@@ -82,6 +83,7 @@ func InitOptionMap() {
 	common.OptionMap["StripeWebhookSecret"] = setting.StripeWebhookSecret
 	common.OptionMap["StripePriceId"] = setting.StripePriceId
 	common.OptionMap["StripeUnitPrice"] = strconv.FormatFloat(setting.StripeUnitPrice, 'f', -1, 64)
+	common.OptionMap["StripePromotionCodesEnabled"] = strconv.FormatBool(setting.StripePromotionCodesEnabled)
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
 	common.OptionMap["Chats"] = setting.Chats2JsonString()
 	common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
@@ -112,6 +114,9 @@ func InitOptionMap() {
 	common.OptionMap["GroupGroupRatio"] = ratio_setting.GroupGroupRatio2JSONString()
 	common.OptionMap["UserUsableGroups"] = setting.UserUsableGroups2JSONString()
 	common.OptionMap["CompletionRatio"] = ratio_setting.CompletionRatio2JSONString()
+	common.OptionMap["ImageRatio"] = ratio_setting.ImageRatio2JSONString()
+	common.OptionMap["AudioRatio"] = ratio_setting.AudioRatio2JSONString()
+	common.OptionMap["AudioCompletionRatio"] = ratio_setting.AudioCompletionRatio2JSONString()
 	common.OptionMap["TopUpLink"] = common.TopUpLink
 	//common.OptionMap["ChatLink"] = common.ChatLink
 	//common.OptionMap["ChatLink2"] = common.ChatLink2
@@ -237,7 +242,15 @@ func updateOptionMap(key string, value string) (err error) {
 		case "LogConsumeEnabled":
 			common.LogConsumeEnabled = boolValue
 		case "DisplayInCurrencyEnabled":
-			common.DisplayInCurrencyEnabled = boolValue
+			// 兼容旧字段：同步到新配置 general_setting.quota_display_type（运行时生效）
+			// true -> USD, false -> TOKENS
+			newVal := "USD"
+			if !boolValue {
+				newVal = "TOKENS"
+			}
+			if cfg := config.GlobalConfig.Get("general_setting"); cfg != nil {
+				_ = config.UpdateConfigFromMap(cfg, map[string]string{"quota_display_type": newVal})
+			}
 		case "DisplayTokenStatEnabled":
 			common.DisplayTokenStatEnabled = boolValue
 		case "DrawingEnabled":
@@ -330,6 +343,8 @@ func updateOptionMap(key string, value string) (err error) {
 		setting.StripeUnitPrice, _ = strconv.ParseFloat(value, 64)
 	case "StripeMinTopUp":
 		setting.StripeMinTopUp, _ = strconv.Atoi(value)
+	case "StripePromotionCodesEnabled":
+		setting.StripePromotionCodesEnabled = value == "true"
 	case "TopupGroupRatio":
 		err = common.UpdateTopupGroupRatioByJSONString(value)
 	case "GitHubClientId":
@@ -400,6 +415,12 @@ func updateOptionMap(key string, value string) (err error) {
 		err = ratio_setting.UpdateModelPriceByJSONString(value)
 	case "CacheRatio":
 		err = ratio_setting.UpdateCacheRatioByJSONString(value)
+	case "ImageRatio":
+		err = ratio_setting.UpdateImageRatioByJSONString(value)
+	case "AudioRatio":
+		err = ratio_setting.UpdateAudioRatioByJSONString(value)
+	case "AudioCompletionRatio":
+		err = ratio_setting.UpdateAudioCompletionRatioByJSONString(value)
 	case "TopUpLink":
 		common.TopUpLink = value
 	//case "ChatLink":

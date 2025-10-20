@@ -379,6 +379,12 @@ export const useLogsData = () => {
                 other.file_search_call_count || 0,
               ),
         });
+        if (logs[i]?.content) {
+          expandDataLocal.push({
+            key: t('其他详情'),
+            value: logs[i].content,
+          });
+        }
       }
       if (logs[i].type === 2) {
         let modelMapped =
@@ -481,6 +487,12 @@ export const useLogsData = () => {
             value: <JsonDisplay jsonString={logs[i].body} />
           });
         }
+      }
+      if (other?.request_path) {
+        expandDataLocal.push({
+          key: t('请求路径'),
+          value: other.request_path,
+        });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
