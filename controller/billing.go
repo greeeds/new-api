@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/model"
+	"baipiao-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
 )
 

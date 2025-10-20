@@ -1,7 +1,7 @@
 package model_setting
 
 import (
-	"github.com/QuantumNous/new-api/setting/config"
+	"baipiao-api/setting/config"
 )
 
 // GeminiSettings 定义Gemini模型的配置

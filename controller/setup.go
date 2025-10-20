@@ -3,11 +3,11 @@ package controller
 import (
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/model"
+	"baipiao-api/setting/operation_setting"
 )
 
 type Setup struct {

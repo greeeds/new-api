@@ -13,23 +13,23 @@
 
 🍥 Next-Generation Large Model Gateway and AI Asset Management System
 
-<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="Calcium-Ion%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="greeeds%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Calcium-Ion/new-api/main/LICENSE">
-    <img src="https://img.shields.io/github/license/Calcium-Ion/new-api?color=brightgreen" alt="license">
+  <a href="https://raw.githubusercontent.com/greeeds/new-api/main/LICENSE">
+    <img src="https://img.shields.io/github/license/greeeds/new-api?color=brightgreen" alt="license">
   </a>
-  <a href="https://github.com/Calcium-Ion/new-api/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Calcium-Ion/new-api?color=brightgreen&include_prereleases" alt="release">
+  <a href="https://github.com/greeeds/new-api/releases/latest">
+    <img src="https://img.shields.io/github/v/release/greeeds/new-api?color=brightgreen&include_prereleases" alt="release">
   </a>
-  <a href="https://github.com/users/Calcium-Ion/packages/container/package/new-api">
+  <a href="https://github.com/users/greeeds/packages/container/package/new-api">
     <img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="docker">
   </a>
   <a href="https://hub.docker.com/r/CalciumIon/new-api">
     <img src="https://img.shields.io/badge/docker-dockerHub-blue" alt="docker">
   </a>
-  <a href="https://goreportcard.com/report/github.com/Calcium-Ion/new-api">
-    <img src="https://goreportcard.com/badge/github.com/Calcium-Ion/new-api" alt="GoReportCard">
+  <a href="https://goreportcard.com/report/github.com/greeeds/new-api">
+    <img src="https://goreportcard.com/badge/github.com/greeeds/new-api" alt="GoReportCard">
   </a>
 </p>
 </div>
@@ -80,7 +80,7 @@ New API offers a wide range of features, please refer to [Features Introduction]
 1. 🎨 Brand new UI interface
 2. 🌍 Multi-language support
 3. 💰 Online recharge functionality, currently supports EPay and Stripe
-4. 🔍 Support for querying usage quotas with keys (works with [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool))
+4. 🔍 Support for querying usage quotas with keys (works with [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool))
 5. 🔄 Compatible with the original One API database
 6. 💵 Support for pay-per-use model pricing
 7. ⚖️ Support for weighted random channel selection
@@ -170,7 +170,7 @@ Install BaoTa Panel (version **9.2.0** or above), find **New-API** in the applic
 #### Using Docker Compose (Recommended)
 ```shell
 # Download the project
-git clone https://github.com/Calcium-Ion/new-api.git
+git clone https://github.com/greeeds/new-api.git
 cd new-api
 # Edit docker-compose.yml as needed
 # Start
@@ -208,10 +208,10 @@ For detailed API documentation, please refer to [API Documentation](https://docs
 ## Related Projects
 - [One API](https://github.com/songquanpeng/one-api): Original project
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy): Midjourney interface support
-- [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool): Query usage quota with key
+- [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool): Query usage quota with key
 
 Other projects based on New API:
-- [new-api-horizon](https://github.com/Calcium-Ion/new-api-horizon): High-performance optimized version of New API
+- [new-api-horizon](https://github.com/greeeds/new-api-horizon): High-performance optimized version of New API
 
 ## Help and Support
 
@@ -222,4 +222,4 @@ If you have any questions, please refer to [Help and Support](https://docs.newap
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Calcium-Ion/new-api&type=Date)](https://star-history.com/#Calcium-Ion/new-api&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=greeeds/new-api&type=Date)](https://star-history.com/#greeeds/new-api&Date)

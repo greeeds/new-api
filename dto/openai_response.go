@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/types"
 )
 
 const (

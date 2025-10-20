@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel/openrouter"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
+	"baipiao-api/relay/channel/openrouter"
+	relaycommon "baipiao-api/relay/common"
 )
 
 func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.RelayInfo) (*dto.GeneralOpenAIRequest, error) {

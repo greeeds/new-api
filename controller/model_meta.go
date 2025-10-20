@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/model"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/model"
 
 	"github.com/gin-gonic/gin"
 )

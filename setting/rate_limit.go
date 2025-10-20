@@ -6,7 +6,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/QuantumNous/new-api/common"
+"baipiao-api/common"
 )
 
 var ModelRequestRateLimitEnabled = false

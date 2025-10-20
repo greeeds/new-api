@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/model"
+	"baipiao-api/logger"
+	"baipiao-api/model"
 
 	"github.com/gin-gonic/gin"
 )

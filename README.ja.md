@@ -13,23 +13,23 @@
 
 🍥次世代大規模モデルゲートウェイとAI資産管理システム
 
-<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="Calcium-Ion%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="greeeds%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Calcium-Ion/new-api/main/LICENSE">
-    <img src="https://img.shields.io/github/license/Calcium-Ion/new-api?color=brightgreen" alt="license">
+  <a href="https://raw.githubusercontent.com/greeeds/new-api/main/LICENSE">
+    <img src="https://img.shields.io/github/license/greeeds/new-api?color=brightgreen" alt="license">
   </a>
-  <a href="https://github.com/Calcium-Ion/new-api/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Calcium-Ion/new-api?color=brightgreen&include_prereleases" alt="release">
+  <a href="https://github.com/greeeds/new-api/releases/latest">
+    <img src="https://img.shields.io/github/v/release/greeeds/new-api?color=brightgreen&include_prereleases" alt="release">
   </a>
-  <a href="https://github.com/users/Calcium-Ion/packages/container/package/new-api">
+  <a href="https://github.com/users/greeeds/packages/container/package/new-api">
     <img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="docker">
   </a>
   <a href="https://hub.docker.com/r/CalciumIon/new-api">
     <img src="https://img.shields.io/badge/docker-dockerHub-blue" alt="docker">
   </a>
-  <a href="https://goreportcard.com/report/github.com/Calcium-Ion/new-api">
-    <img src="https://goreportcard.com/badge/github.com/Calcium-Ion/new-api" alt="GoReportCard">
+  <a href="https://goreportcard.com/report/github.com/greeeds/new-api">
+    <img src="https://goreportcard.com/badge/github.com/greeeds/new-api" alt="GoReportCard">
   </a>
 </p>
 </div>
@@ -80,7 +80,7 @@ New APIは豊富な機能を提供しています。詳細な機能について�
 1. 🎨 全く新しいUIインターフェース
 2. 🌍 多言語サポート
 3. 💰 オンラインチャージ機能をサポート、現在EPayとStripeをサポート
-4. 🔍 キーによる使用量クォータの照会をサポート（[neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)と連携）
+4. 🔍 キーによる使用量クォータの照会をサポート（[neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool)と連携）
 5. 🔄 オリジナルのOne APIデータベースと互換性あり
 6. 💵 モデルの従量課金をサポート
 7. ⚖️ チャネルの重み付けランダムをサポート
@@ -170,7 +170,7 @@ New APIは豊富な機能を提供しています。詳細な機能について�
 #### Docker Composeを使用してデプロイ（推奨）
 ```shell
 # プロジェクトをダウンロード
-git clone https://github.com/Calcium-Ion/new-api.git
+git clone https://github.com/greeeds/new-api.git
 cd new-api
 # 必要に応じてdocker-compose.ymlを編集
 # 起動
@@ -208,10 +208,10 @@ docker run --name new-api -d --restart always -p 3000:3000 -e SQL_DSN="root:1234
 ## 関連プロジェクト
 - [One API](https://github.com/songquanpeng/one-api)：オリジナルプロジェクト
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy)：Midjourneyインターフェースサポート
-- [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)：キーを使用して使用量クォータを照会
+- [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool)：キーを使用して使用量クォータを照会
 
 New APIベースのその他のプロジェクト：
-- [new-api-horizon](https://github.com/Calcium-Ion/new-api-horizon)：New API高性能最適化版
+- [new-api-horizon](https://github.com/greeeds/new-api-horizon)：New API高性能最適化版
 
 ## ヘルプサポート
 
@@ -222,5 +222,5 @@ New APIベースのその他のプロジェクト：
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Calcium-Ion/new-api&type=Date)](https://star-history.com/#Calcium-Ion/new-api&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=greeeds/new-api&type=Date)](https://star-history.com/#greeeds/new-api&Date)
 

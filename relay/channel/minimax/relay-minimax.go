@@ -3,7 +3,7 @@ package minimax
 import (
 	"fmt"
 
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relaycommon "baipiao-api/relay/common"
 )
 
 func GetRequestURL(info *relaycommon.RelayInfo) (string, error) {

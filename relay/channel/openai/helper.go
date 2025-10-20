@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	relayconstant "github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/logger"
+	relaycommon "baipiao-api/relay/common"
+	relayconstant "baipiao-api/relay/constant"
+	"baipiao-api/relay/helper"
+	"baipiao-api/service"
+	"baipiao-api/types"
 
 	"github.com/samber/lo"
 

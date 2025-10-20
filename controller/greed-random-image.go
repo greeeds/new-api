@@ -1,14 +1,14 @@
 package controller
 
 import (
+	"baipiao-api/common"
+	"baipiao-api/model"
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"io"
 	"math/rand/v2"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
 	"os"
 	"strconv"
 )

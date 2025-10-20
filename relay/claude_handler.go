@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/setting/model_setting"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/relay/helper"
+	"baipiao-api/service"
+	"baipiao-api/setting/model_setting"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

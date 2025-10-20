@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
+"baipiao-api/common"
+"baipiao-api/model"
 
-	"github.com/gin-gonic/gin"
+"github.com/gin-gonic/gin"
 )
 
 func GetAllRedemptions(c *gin.Context) {

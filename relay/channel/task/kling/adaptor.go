@@ -9,20 +9,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
+"baipiao-api/common"
+"baipiao-api/model"
 
-	"github.com/samber/lo"
+"github.com/samber/lo"
 
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
+"github.com/gin-gonic/gin"
+"github.com/golang-jwt/jwt/v5"
+"github.com/pkg/errors"
 
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/service"
+"baipiao-api/constant"
+"baipiao-api/dto"
+"baipiao-api/relay/channel"
+relaycommon "baipiao-api/relay/common"
+"baipiao-api/service"
 )
 
 // ============================

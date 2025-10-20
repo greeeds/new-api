@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/dto"
+	"baipiao-api/logger"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/relay/helper"
+	"baipiao-api/service"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

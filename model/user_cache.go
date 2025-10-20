@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
 
 	"github.com/gin-gonic/gin"
 

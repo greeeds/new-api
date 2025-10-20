@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/types"
+"baipiao-api/common"
+"baipiao-api/logger"
+"baipiao-api/types"
 
-	"github.com/gin-gonic/gin"
+"github.com/gin-gonic/gin"
 )
-
 type GeminiChatRequest struct {
 	Requests           []GeminiChatRequest        `json:"requests,omitempty"` // For batch requests
 	Contents           []GeminiChatContent        `json:"contents"`

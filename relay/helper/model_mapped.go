@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/common"
 	"github.com/gin-gonic/gin"
+	"baipiao-api/dto"
+	"baipiao-api/relay/common"
 )
 
 func ModelMappedHelper(c *gin.Context, info *common.RelayInfo, request dto.Request) error {

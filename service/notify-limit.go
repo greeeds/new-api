@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
+	"baipiao-api/common"
+	"baipiao-api/constant"
 	"github.com/bytedance/gopkg/util/gopool"
 )
 

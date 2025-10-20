@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/middleware"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/middleware"
+	"baipiao-api/model"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -13,23 +13,23 @@
 
 🍥 Passerelle de modèles étendus de nouvelle génération et système de gestion d'actifs d'IA
 
-<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="Calcium-Ion%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="greeeds%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Calcium-Ion/new-api/main/LICENSE">
-    <img src="https://img.shields.io/github/license/Calcium-Ion/new-api?color=brightgreen" alt="licence">
+  <a href="https://raw.githubusercontent.com/greeeds/new-api/main/LICENSE">
+    <img src="https://img.shields.io/github/license/greeeds/new-api?color=brightgreen" alt="licence">
   </a>
-  <a href="https://github.com/Calcium-Ion/new-api/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Calcium-Ion/new-api?color=brightgreen&include_prereleases" alt="version">
+  <a href="https://github.com/greeeds/new-api/releases/latest">
+    <img src="https://img.shields.io/github/v/release/greeeds/new-api?color=brightgreen&include_prereleases" alt="version">
   </a>
-  <a href="https://github.com/users/Calcium-Ion/packages/container/package/new-api">
+  <a href="https://github.com/users/greeeds/packages/container/package/new-api">
     <img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="docker">
   </a>
   <a href="https://hub.docker.com/r/CalciumIon/new-api">
     <img src="https://img.shields.io/badge/docker-dockerHub-blue" alt="docker">
   </a>
-  <a href="https://goreportcard.com/report/github.com/Calcium-Ion/new-api">
-    <img src="https://goreportcard.com/badge/github.com/Calcium-Ion/new-api" alt="GoReportCard">
+  <a href="https://goreportcard.com/report/github.com/greeeds/new-api">
+    <img src="https://goreportcard.com/badge/github.com/greeeds/new-api" alt="GoReportCard">
   </a>
 </p>
 </div>
@@ -80,7 +80,7 @@ New API offre un large éventail de fonctionnalités, veuillez vous référer à
 1. 🎨 Nouvelle interface utilisateur
 2. 🌍 Prise en charge multilingue
 3. 💰 Fonctionnalité de recharge en ligne, prend actuellement en charge EPay et Stripe
-4. 🔍 Prise en charge de la recherche de quotas d'utilisation avec des clés (fonctionne avec [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool))
+4. 🔍 Prise en charge de la recherche de quotas d'utilisation avec des clés (fonctionne avec [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool))
 5. 🔄 Compatible avec la base de données originale de One API
 6. 💵 Prise en charge de la tarification des modèles de paiement à l'utilisation
 7. ⚖️ Prise en charge de la sélection aléatoire pondérée des canaux
@@ -170,7 +170,7 @@ Installez le panneau BaoTa (version **9.2.0** ou supérieure), recherchez **New-
 #### Utilisation de Docker Compose (recommandé)
 ```shell
 # Télécharger le projet
-git clone https://github.com/Calcium-Ion/new-api.git
+git clone https://github.com/greeeds/new-api.git
 cd new-api
 # Modifier docker-compose.yml si nécessaire
 # Démarrer
@@ -208,10 +208,10 @@ Pour une documentation détaillée de l'API, veuillez vous référer à [Documen
 ## Projets connexes
 - [One API](https://github.com/songquanpeng/one-api) : Projet original
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy) : Prise en charge de l'interface Midjourney
-- [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool) : Interroger le quota d'utilisation avec une clé
+- [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool) : Interroger le quota d'utilisation avec une clé
 
 Autres projets basés sur New API :
-- [new-api-horizon](https://github.com/Calcium-Ion/new-api-horizon) : Version optimisée hautes performances de New API
+- [new-api-horizon](https://github.com/greeeds/new-api-horizon) : Version optimisée hautes performances de New API
 
 ## Aide et support
 
@@ -222,4 +222,4 @@ Si vous avez des questions, veuillez vous référer à [Aide et support](https:/
 
 ## 🌟 Historique des étoiles
 
-[![Graphique de l'historique des étoiles](https://api.star-history.com/svg?repos=Calcium-Ion/new-api&type=Date)](https://star-history.com/#Calcium-Ion/new-api&Date)
+[![Graphique de l'historique des étoiles](https://api.star-history.com/svg?repos=greeeds/new-api&type=Date)](https://star-history.com/#greeeds/new-api&Date)

@@ -6,11 +6,11 @@ import (
 	"math"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	relayconstant "github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/logger"
+	relayconstant "baipiao-api/relay/constant"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
 	"github.com/gin-gonic/gin"
+	"baipiao-api/common"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"

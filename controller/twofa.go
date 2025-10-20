@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
+	"baipiao-api/common"
+	"baipiao-api/model"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

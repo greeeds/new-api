@@ -1,7 +1,7 @@
 package model
 
 import (
-	"one-api/common"
+	"baipiao-api/common"
 )
 
 type GreedImage struct {

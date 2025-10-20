@@ -3,11 +3,11 @@ package helper
 import (
 	"fmt"
 
-	"github.com/QuantumNous/new-api/common"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/setting/operation_setting"
+	"baipiao-api/setting/ratio_setting"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/dto"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"baipiao-api/dto"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/types"
 )
 
 type VolcengineTTSRequest struct {

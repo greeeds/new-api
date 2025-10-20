@@ -12,10 +12,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/logger"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

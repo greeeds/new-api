@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/QuantumNous/new-api/common"
+	"baipiao-api/common"
 )
 
 var groupRatio = map[string]float64{

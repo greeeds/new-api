@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/logger"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"

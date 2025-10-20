@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/dto"
+	"baipiao-api/dto"
 )
 
 //func GetPromptTokens(textRequest dto.GeneralOpenAIRequest, relayMode int) (int, error) {

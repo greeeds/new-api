@@ -4,10 +4,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/setting/config"
+"baipiao-api/common"
+"baipiao-api/setting/config"
 )
-
 type PasskeySettings struct {
 	Enabled              bool   `json:"enabled"`
 	RPDisplayName        string `json:"rp_display_name"`

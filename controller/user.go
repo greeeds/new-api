@@ -9,13 +9,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/logger"
+	"baipiao-api/model"
+	"baipiao-api/setting"
 
-	"github.com/QuantumNous/new-api/constant"
+	"baipiao-api/constant"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

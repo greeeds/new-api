@@ -12,21 +12,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/relay/channel/openrouter"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
+"baipiao-api/common"
+"baipiao-api/constant"
+"baipiao-api/dto"
+"baipiao-api/logger"
+"baipiao-api/relay/channel/openrouter"
+relaycommon "baipiao-api/relay/common"
+"baipiao-api/relay/helper"
+"baipiao-api/service"
 
-	"github.com/QuantumNous/new-api/types"
+"baipiao-api/types"
 
-	"github.com/bytedance/gopkg/util/gopool"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
+"github.com/bytedance/gopkg/util/gopool"
+"github.com/gin-gonic/gin"
+"github.com/gorilla/websocket"
+"github.com/pkg/errors"
 )
 
 func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, forceFormat bool, thinkToContent bool) error {

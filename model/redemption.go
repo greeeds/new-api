@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
+	"baipiao-api/common"
+	"baipiao-api/logger"
 
 	"gorm.io/gorm"
 )

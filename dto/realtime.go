@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/QuantumNous/new-api/types"
+import "baipiao-api/types"
 
 const (
 	RealtimeEventTypeError              = "error"

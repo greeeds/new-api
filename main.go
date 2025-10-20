@@ -11,15 +11,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/controller"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/middleware"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/router"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/controller"
+	"baipiao-api/logger"
+	"baipiao-api/middleware"
+	"baipiao-api/model"
+	"baipiao-api/router"
+	"baipiao-api/service"
+	"baipiao-api/setting/ratio_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
@@ -30,10 +30,10 @@ import (
 	_ "net/http/pprof"
 )
 
-//go:embed web/dist
+// //go:embed web/dist
 var buildFS embed.FS
 
-//go:embed web/dist/index.html
+// //go:embed web/dist/index.html
 var indexPage []byte
 
 func main() {
@@ -130,7 +130,7 @@ func main() {
 		common.SysLog(fmt.Sprintf("panic detected: %v", err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/Calcium-Ion/new-api", err),
+				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/greeeds/new-api", err),
 				"type":    "new_api_panic",
 			},
 		})

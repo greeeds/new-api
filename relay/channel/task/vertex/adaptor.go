@@ -10,16 +10,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/QuantumNous/new-api/model"
+"baipiao-api/model"
 
-	"github.com/gin-gonic/gin"
+"github.com/gin-gonic/gin"
 
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	vertexcore "github.com/QuantumNous/new-api/relay/channel/vertex"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/service"
+"baipiao-api/constant"
+"baipiao-api/dto"
+"baipiao-api/relay/channel"
+vertexcore "baipiao-api/relay/channel/vertex"
+relaycommon "baipiao-api/relay/common"
+"baipiao-api/service"
 )
 
 // ============================

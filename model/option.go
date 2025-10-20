@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/setting"
-	"github.com/QuantumNous/new-api/setting/config"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
-	"github.com/QuantumNous/new-api/setting/system_setting"
+	"baipiao-api/common"
+	"baipiao-api/setting"
+	"baipiao-api/setting/config"
+	"baipiao-api/setting/operation_setting"
+	"baipiao-api/setting/ratio_setting"
+	"baipiao-api/setting/system_setting"
 )
 
 type Option struct {

@@ -3,8 +3,8 @@ package middleware
 import (
 	"fmt"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
+	"baipiao-api/common"
+	"baipiao-api/logger"
 	"github.com/gin-gonic/gin"
 )
 

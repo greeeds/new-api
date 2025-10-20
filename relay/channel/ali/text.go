@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/relay/helper"
+	"baipiao-api/service"
 
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

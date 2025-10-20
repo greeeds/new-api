@@ -3,7 +3,7 @@ package dto
 import (
 	"encoding/json"
 
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -6,12 +6,12 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/types"
+"baipiao-api/dto"
+"baipiao-api/relay/channel"
+relaycommon "baipiao-api/relay/common"
+"baipiao-api/types"
 
-	"github.com/gin-gonic/gin"
+"github.com/gin-gonic/gin"
 )
 
 const (

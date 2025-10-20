@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
+	"baipiao-api/relay/helper"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

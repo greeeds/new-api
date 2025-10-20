@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
+	"baipiao-api/common"
+	"baipiao-api/constant"
 
 	"github.com/gin-gonic/gin"
 )

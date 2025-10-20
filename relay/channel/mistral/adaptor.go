@@ -5,11 +5,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/openai"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/dto"
+	"baipiao-api/relay/channel"
+	"baipiao-api/relay/channel/openai"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

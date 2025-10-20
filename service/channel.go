@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
+	"baipiao-api/model"
+	"baipiao-api/setting/operation_setting"
+	"baipiao-api/types"
 )
 
 func formatNotifyType(channelId int, status int) string {

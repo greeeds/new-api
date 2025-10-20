@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/constant"
+	"baipiao-api/constant"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 func printHelp() {
 	fmt.Println("NewAPI(Based OneAPI) " + Version + " - The next-generation LLM gateway and AI asset management system supports multiple languages.")
 	fmt.Println("Original Project: OneAPI by JustSong - https://github.com/songquanpeng/one-api")
-	fmt.Println("Maintainer: QuantumNous - https://github.com/QuantumNous/new-api")
+	fmt.Println("Maintainer: QuantumNous - https://github.com/greeeds/new-api")
 	fmt.Println("Usage: newapi [--port <port>] [--log-dir <log directory>] [--version] [--help]")
 }
 

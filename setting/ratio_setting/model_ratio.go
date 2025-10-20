@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"baipiao-api/common"
+	"baipiao-api/setting/operation_setting"
 )
 
 // from songquanpeng/one-api

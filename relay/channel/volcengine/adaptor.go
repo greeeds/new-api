@@ -12,13 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	channelconstant "github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/openai"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/types"
+	channelconstant "baipiao-api/constant"
+	"baipiao-api/dto"
+	"baipiao-api/relay/channel"
+	"baipiao-api/relay/channel/openai"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/relay/constant"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

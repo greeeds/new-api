@@ -1,6 +1,6 @@
 package ali
 
-import "github.com/QuantumNous/new-api/dto"
+import "baipiao-api/dto"
 
 type AliMessage struct {
 	Content any    `json:"content"`

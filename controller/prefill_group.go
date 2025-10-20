@@ -3,10 +3,10 @@ package controller
 import (
 	"strconv"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
+"baipiao-api/common"
+"baipiao-api/model"
 
-	"github.com/gin-gonic/gin"
+"github.com/gin-gonic/gin"
 )
 
 // GetPrefillGroups 获取预填组列表，可通过 ?type=xxx 过滤

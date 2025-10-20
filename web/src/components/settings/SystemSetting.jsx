@@ -715,7 +715,7 @@ const SystemSetting = () => {
                   <Text>
                     {t('仅支持')}{' '}
                     <a
-                      href='https://github.com/Calcium-Ion/new-api-worker'
+                      href='https://github.com/greeeds/new-api-worker'
                       target='_blank'
                       rel='noreferrer'
                     >

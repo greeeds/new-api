@@ -1,6 +1,6 @@
 package vertex
 
-import "github.com/QuantumNous/new-api/common"
+import "baipiao-api/common"
 
 func GetModelRegion(other string, localModelName string) string {
 	// if other is json string

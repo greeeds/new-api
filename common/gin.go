@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/constant"
+	"baipiao-api/constant"
 
 	"github.com/gin-gonic/gin"
 )

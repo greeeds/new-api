@@ -9,23 +9,23 @@
 
 🍥新一代大模型网关与AI资产管理系统
 
-<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="Calcium-Ion%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/8227" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8227" alt="greeeds%2Fnew-api | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Calcium-Ion/new-api/main/LICENSE">
-    <img src="https://img.shields.io/github/license/Calcium-Ion/new-api?color=brightgreen" alt="license">
+  <a href="https://raw.githubusercontent.com/greeeds/new-api/main/LICENSE">
+    <img src="https://img.shields.io/github/license/greeeds/new-api?color=brightgreen" alt="license">
   </a>
-  <a href="https://github.com/Calcium-Ion/new-api/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Calcium-Ion/new-api?color=brightgreen&include_prereleases" alt="release">
+  <a href="https://github.com/greeeds/new-api/releases/latest">
+    <img src="https://img.shields.io/github/v/release/greeeds/new-api?color=brightgreen&include_prereleases" alt="release">
   </a>
-  <a href="https://github.com/users/Calcium-Ion/packages/container/package/new-api">
+  <a href="https://github.com/users/greeeds/packages/container/package/new-api">
     <img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="docker">
   </a>
   <a href="https://hub.docker.com/r/CalciumIon/new-api">
     <img src="https://img.shields.io/badge/docker-dockerHub-blue" alt="docker">
   </a>
-  <a href="https://goreportcard.com/report/github.com/Calcium-Ion/new-api">
-    <img src="https://goreportcard.com/badge/github.com/Calcium-Ion/new-api" alt="GoReportCard">
+  <a href="https://goreportcard.com/report/github.com/greeeds/new-api">
+    <img src="https://goreportcard.com/badge/github.com/greeeds/new-api" alt="GoReportCard">
   </a>
 </p>
 </div>
@@ -76,7 +76,7 @@ New API提供了丰富的功能，详细特性请参考[特性说明](https://do
 1. 🎨 全新的UI界面
 2. 🌍 多语言支持
 3. 💰 支持在线充值功能，当前支持易支付和Stripe
-4. 🔍 支持用key查询使用额度（配合[neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)）
+4. 🔍 支持用key查询使用额度（配合[neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool)）
 5. 🔄 兼容原版One API的数据库
 6. 💵 支持模型按次数收费
 7. ⚖️ 支持渠道加权随机
@@ -166,7 +166,7 @@ New API提供了丰富的功能，详细特性请参考[特性说明](https://do
 #### 使用Docker Compose部署（推荐）
 ```shell
 # 下载项目源码
-git clone https://github.com/QuantumNous/new-api.git
+git clone https://github.com/greeeds/new-api.git
 
 # 进入项目目录
 cd new-api
@@ -210,10 +210,10 @@ docker run --name new-api -d --restart always -p 3000:3000 -e SQL_DSN="root:1234
 ## 相关项目
 - [One API](https://github.com/songquanpeng/one-api)：原版项目
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy)：Midjourney接口支持
-- [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)：用key查询使用额度
+- [neko-api-key-tool](https://github.com/greeeds/neko-api-key-tool)：用key查询使用额度
 
 其他基于New API的项目：
-- [new-api-horizon](https://github.com/Calcium-Ion/new-api-horizon)：New API高性能优化版
+- [new-api-horizon](https://github.com/greeeds/new-api-horizon)：New API高性能优化版
 
 ## 帮助支持
 
@@ -224,4 +224,4 @@ docker run --name new-api -d --restart always -p 3000:3000 -e SQL_DSN="root:1234
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Calcium-Ion/new-api&type=Date)](https://star-history.com/#Calcium-Ion/new-api&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=greeeds/new-api&type=Date)](https://star-history.com/#greeeds/new-api&Date)

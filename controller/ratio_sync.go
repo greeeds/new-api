@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/QuantumNous/new-api/logger"
+	"baipiao-api/logger"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"baipiao-api/dto"
+	"baipiao-api/model"
+	"baipiao-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
 )

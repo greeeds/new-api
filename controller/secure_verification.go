@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
-	passkeysvc "github.com/QuantumNous/new-api/service/passkey"
-	"github.com/QuantumNous/new-api/setting/system_setting"
+	"baipiao-api/common"
+	"baipiao-api/model"
+	passkeysvc "baipiao-api/service/passkey"
+	"baipiao-api/setting/system_setting"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

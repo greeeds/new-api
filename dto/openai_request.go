@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )
