@@ -3,12 +3,10 @@ package controller
 import (
 	"errors"
 	"fmt"
-	"time"
 
-	"baipiao-api/common"
-	"baipiao-api/constant"
 	"baipiao-api/middleware"
 	"baipiao-api/model"
+	relaycommon "baipiao-api/relay/common"
 	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -31,8 +29,11 @@ func Playground(c *gin.Context) {
 		return
 	}
 
-	group := c.GetString("group")
-	modelName := c.GetString("original_model")
+	relayInfo, err := relaycommon.GenRelayInfo(c, types.RelayFormatOpenAI, nil, nil)
+	if err != nil {
+		newAPIError = types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+		return
+	}
 
 	userId := c.GetInt("id")
 
@@ -46,16 +47,10 @@ func Playground(c *gin.Context) {
 
 	tempToken := &model.Token{
 		UserId: userId,
-		Name:   fmt.Sprintf("playground-%s", group),
-		Group:  group,
+		Name:   fmt.Sprintf("playground-%s", relayInfo.UsingGroup),
+		Group:  relayInfo.UsingGroup,
 	}
 	_ = middleware.SetupContextForToken(c, tempToken)
-	_, newAPIError = getChannel(c, group, modelName, 0)
-	if newAPIError != nil {
-		return
-	}
-	//middleware.SetupContextForSelectedChannel(c, channel, playgroundRequest.Model)
-	common.SetContextKey(c, constant.ContextKeyRequestStartTime, time.Now())
 
 	Relay(c, types.RelayFormatOpenAI)
 }

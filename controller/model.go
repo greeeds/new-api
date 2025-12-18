@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"baipiao-api/common"
 	"baipiao-api/constant"
 	"baipiao-api/dto"
@@ -16,7 +15,11 @@ import (
 	"baipiao-api/relay/channel/minimax"
 	"baipiao-api/relay/channel/moonshot"
 	relaycommon "baipiao-api/relay/common"
-	"baipiao-api/setting"
+	"baipiao-api/service"
+	"baipiao-api/setting/operation_setting"
+	"baipiao-api/setting/ratio_setting"
+	"baipiao-api/types"
+	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 )
 
@@ -109,6 +112,17 @@ func init() {
 func ListModels(c *gin.Context, modelType int) {
 	userOpenAiModels := make([]dto.OpenAIModels, 0)
 
+	acceptUnsetRatioModel := operation_setting.SelfUseModeEnabled
+	if !acceptUnsetRatioModel {
+		userId := c.GetInt("id")
+		if userId > 0 {
+			userSettings, _ := model.GetUserSetting(userId, false)
+			if userSettings.AcceptUnsetRatioModel {
+				acceptUnsetRatioModel = true
+			}
+		}
+	}
+
 	modelLimitEnable := common.GetContextKeyBool(c, constant.ContextKeyTokenModelLimitEnabled)
 	if modelLimitEnable {
 		s, ok := common.GetContextKey(c, constant.ContextKeyTokenModelLimit)
@@ -119,6 +133,12 @@ func ListModels(c *gin.Context, modelType int) {
 			tokenModelLimit = map[string]bool{}
 		}
 		for allowModel, _ := range tokenModelLimit {
+			if !acceptUnsetRatioModel {
+				_, _, exist := ratio_setting.GetModelRatioOrPrice(allowModel)
+				if !exist {
+					continue
+				}
+			}
 			if oaiModel, ok := openAIModelsMap[allowModel]; ok {
 				oaiModel.SupportedEndpointTypes = model.GetModelSupportEndpointTypes(allowModel)
 				userOpenAiModels = append(userOpenAiModels, oaiModel)
@@ -149,7 +169,7 @@ func ListModels(c *gin.Context, modelType int) {
 		}
 		var models []string
 		if tokenGroup == "auto" {
-			for _, autoGroup := range setting.AutoGroups {
+			for _, autoGroup := range service.GetUserAutoGroup(userGroup) {
 				groupModels := model.GetGroupEnabledModels(autoGroup)
 				for _, g := range groupModels {
 					if !common.StringsContains(models, g) {
@@ -161,6 +181,12 @@ func ListModels(c *gin.Context, modelType int) {
 			models = model.GetGroupEnabledModels(group)
 		}
 		for _, modelName := range models {
+			if !acceptUnsetRatioModel {
+				_, _, exist := ratio_setting.GetModelRatioOrPrice(modelName)
+				if !exist {
+					continue
+				}
+			}
 			if oaiModel, ok := openAIModelsMap[modelName]; ok {
 				oaiModel.SupportedEndpointTypes = model.GetModelSupportEndpointTypes(modelName)
 				userOpenAiModels = append(userOpenAiModels, oaiModel)
@@ -175,6 +201,7 @@ func ListModels(c *gin.Context, modelType int) {
 			}
 		}
 	}
+
 	switch modelType {
 	case constant.ChannelTypeAnthropic:
 		useranthropicModels := make([]dto.AnthropicModel, len(userOpenAiModels))
@@ -249,7 +276,7 @@ func RetrieveModel(c *gin.Context, modelType int) {
 			c.JSON(200, aiModel)
 		}
 	} else {
-		openAIError := dto.OpenAIError{
+		openAIError := types.OpenAIError{
 			Message: fmt.Sprintf("The model '%s' does not exist", modelId),
 			Type:    "invalid_request_error",
 			Param:   "model",

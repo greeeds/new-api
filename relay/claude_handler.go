@@ -73,7 +73,9 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			request.TopP = 0
 			request.Temperature = common.GetPointer[float64](1.0)
 		}
-		request.Model = strings.TrimSuffix(request.Model, "-thinking")
+		if !model_setting.ShouldPreserveThinkingSuffix(info.OriginModelName) {
+			request.Model = strings.TrimSuffix(request.Model, "-thinking")
+		}
 		info.UpstreamModelName = request.Model
 	}
 
@@ -132,7 +134,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 		// apply param override
 		if len(info.ParamOverride) > 0 {
-			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride)
+			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
 			if err != nil {
 				service.PostClaudeConsumeQuota(c, info, nil, err.Error(), bodyContent)
 				return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())

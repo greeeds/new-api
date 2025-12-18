@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"baipiao-api/common"
+	"baipiao-api/constant"
 	"baipiao-api/dto"
 	"baipiao-api/logger"
 	relaycommon "baipiao-api/relay/common"
@@ -82,7 +83,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 			// apply param override
 			if len(info.ParamOverride) > 0 {
-				jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride)
+				jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
 				if err != nil {
 					postConsumeQuota(c, info, nil, err.Error(), bodyContent)
 					return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
@@ -109,11 +110,16 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 		httpResp = resp.(*http.Response)
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
-			newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
-			// reset status code 重置状态码
-			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, info, nil, "", bodyContent)
-			return newAPIError
+			if httpResp.StatusCode == http.StatusCreated && info.ApiType == constant.APITypeReplicate {
+				// replicate channel returns 201 Created when using Prefer: wait, treat it as success.
+				httpResp.StatusCode = http.StatusOK
+			} else {
+				newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+				// reset status code 重置状态码
+				service.ResetStatusCode(newAPIError, statusCodeMappingStr)
+				postConsumeQuota(c, info, nil, "", bodyContent)
+				return newAPIError
+			}
 		}
 	}
 

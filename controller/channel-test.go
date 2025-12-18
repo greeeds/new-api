@@ -353,7 +353,7 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 			newAPIError: types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError),
 		}
 	}
-	info.PromptTokens = usage.PromptTokens
+	info.SetEstimatePromptTokens(usage.PromptTokens)
 
 	quota := 0
 	if !priceData.UsePrice {
@@ -620,16 +620,20 @@ func TestAllChannels(c *gin.Context) {
 var autoTestChannelsOnce sync.Once
 
 func AutomaticallyTestChannels() {
+	// 只在Master节点定时测试渠道
+	if !common.IsMasterNode {
+		return
+	}
 	autoTestChannelsOnce.Do(func() {
 		for {
 			if !operation_setting.GetMonitorSetting().AutoTestChannelEnabled {
-				time.Sleep(10 * time.Minute)
+				time.Sleep(1 * time.Minute)
 				continue
 			}
 			for {
 				frequency := operation_setting.GetMonitorSetting().AutoTestChannelMinutes
-				time.Sleep(time.Duration(frequency) * time.Minute)
-				common.SysLog(fmt.Sprintf("automatically test channels with interval %d minutes", frequency))
+				time.Sleep(time.Duration(int(math.Round(frequency))) * time.Minute)
+				common.SysLog(fmt.Sprintf("automatically test channels with interval %f minutes", frequency))
 				common.SysLog("automatically testing all channels")
 				_ = testAllChannels(false)
 				common.SysLog("automatically channel test finished")

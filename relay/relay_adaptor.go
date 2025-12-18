@@ -3,7 +3,6 @@ package relay
 import (
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"baipiao-api/constant"
 	"baipiao-api/relay/channel"
 	"baipiao-api/relay/channel/ali"
@@ -19,6 +18,7 @@ import (
 	"baipiao-api/relay/channel/gemini"
 	"baipiao-api/relay/channel/jimeng"
 	"baipiao-api/relay/channel/jina"
+	"baipiao-api/relay/channel/minimax"
 	"baipiao-api/relay/channel/mistral"
 	"baipiao-api/relay/channel/mokaai"
 	"baipiao-api/relay/channel/moonshot"
@@ -26,9 +26,13 @@ import (
 	"baipiao-api/relay/channel/openai"
 	"baipiao-api/relay/channel/palm"
 	"baipiao-api/relay/channel/perplexity"
+	"baipiao-api/relay/channel/replicate"
 	"baipiao-api/relay/channel/siliconflow"
 	"baipiao-api/relay/channel/submodel"
+	taskali "baipiao-api/relay/channel/task/ali"
 	taskdoubao "baipiao-api/relay/channel/task/doubao"
+	taskGemini "baipiao-api/relay/channel/task/gemini"
+	"baipiao-api/relay/channel/task/hailuo"
 	taskjimeng "baipiao-api/relay/channel/task/jimeng"
 	"baipiao-api/relay/channel/task/kling"
 	tasksora "baipiao-api/relay/channel/task/sora"
@@ -42,6 +46,7 @@ import (
 	"baipiao-api/relay/channel/xunfei"
 	"baipiao-api/relay/channel/zhipu"
 	"baipiao-api/relay/channel/zhipu_4v"
+	"github.com/gin-gonic/gin"
 )
 
 func GetAdaptor(apiType int) channel.Adaptor {
@@ -108,6 +113,10 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &moonshot.Adaptor{} // Moonshot uses Claude API
 	case constant.APITypeSubmodel:
 		return &submodel.Adaptor{}
+	case constant.APITypeMiniMax:
+		return &minimax.Adaptor{}
+	case constant.APITypeReplicate:
+		return &replicate.Adaptor{}
 	}
 	return nil
 }
@@ -129,6 +138,8 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 	}
 	if channelType, err := strconv.ParseInt(string(platform), 10, 64); err == nil {
 		switch channelType {
+		case constant.ChannelTypeAli:
+			return &taskali.TaskAdaptor{}
 		case constant.ChannelTypeKling:
 			return &kling.TaskAdaptor{}
 		case constant.ChannelTypeJimeng:
@@ -141,6 +152,10 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 			return &taskdoubao.TaskAdaptor{}
 		case constant.ChannelTypeSora, constant.ChannelTypeOpenAI:
 			return &tasksora.TaskAdaptor{}
+		case constant.ChannelTypeGemini:
+			return &taskGemini.TaskAdaptor{}
+		case constant.ChannelTypeMiniMax:
+			return &hailuo.TaskAdaptor{}
 		}
 	}
 	return nil

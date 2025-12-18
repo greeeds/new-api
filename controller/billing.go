@@ -2,9 +2,9 @@ package controller
 
 import (
 	"baipiao-api/common"
-	"baipiao-api/dto"
 	"baipiao-api/model"
 	"baipiao-api/setting/operation_setting"
+	"baipiao-api/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +29,7 @@ func GetSubscription(c *gin.Context) {
 		expiredTime = 0
 	}
 	if err != nil {
-		openAIError := dto.OpenAIError{
+		openAIError := types.OpenAIError{
 			Message: err.Error(),
 			Type:    "upstream_error",
 		}
@@ -81,7 +81,7 @@ func GetUsage(c *gin.Context) {
 		quota, err = model.GetUserUsedQuota(userId)
 	}
 	if err != nil {
-		openAIError := dto.OpenAIError{
+		openAIError := types.OpenAIError{
 			Message: err.Error(),
 			Type:    "new_api_error",
 		}

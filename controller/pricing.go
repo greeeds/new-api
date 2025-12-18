@@ -2,7 +2,7 @@ package controller
 
 import (
 	"baipiao-api/model"
-	"baipiao-api/setting"
+	"baipiao-api/service"
 	"baipiao-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +30,7 @@ func GetPricing(c *gin.Context) {
 		}
 	}
 
-	usableGroup = setting.GetUserUsableGroups(group)
+	usableGroup = service.GetUserUsableGroups(group)
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {
 		if _, ok := usableGroup[group]; !ok {
@@ -45,7 +45,7 @@ func GetPricing(c *gin.Context) {
 		"group_ratio":        groupRatio,
 		"usable_group":       usableGroup,
 		"supported_endpoint": model.GetSupportedEndpointMap(),
-		"auto_groups":        setting.AutoGroups,
+		"auto_groups":        service.GetUserAutoGroup(group),
 	})
 }
 
