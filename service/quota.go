@@ -237,14 +237,6 @@ func PostWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, mod
 }
 
 func PostClaudeConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.Usage, extraContent string, bodyContent string) {
-	if usage == nil {
-		usage = &dto.Usage{
-			PromptTokens:     relayInfo.PromptTokens,
-			CompletionTokens: 0,
-			TotalTokens:      relayInfo.PromptTokens,
-		}
-		extraContent += "（可能是请求出错）"
-	}
 	useTimeSeconds := time.Now().Unix() - relayInfo.StartTime.Unix()
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
@@ -338,9 +330,6 @@ func PostClaudeConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, 
 		}
 	}
 
-	if extraContent != "" {
-		logContent += ", " + extraContent
-	}
 	other := GenerateClaudeOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio,
 		cacheTokens, cacheRatio,
 		cacheCreationTokens, cacheCreationRatio,

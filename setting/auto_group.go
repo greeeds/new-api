@@ -1,7 +1,7 @@
 package setting
 
 import (
-	"github.com/QuantumNous/new-api/common"
+	"baipiao-api/common"
 )
 
 var autoGroups = []string{

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/dto"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/dto"
+	relaycommon "baipiao-api/relay/common"
+	"baipiao-api/types"
 	"github.com/gin-gonic/gin"
 )
 

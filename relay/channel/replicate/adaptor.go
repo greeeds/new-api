@@ -12,14 +12,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	relayconstant "github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/constant"
+	"baipiao-api/dto"
+	"baipiao-api/relay/channel"
+	relaycommon "baipiao-api/relay/common"
+	relayconstant "baipiao-api/relay/constant"
+	"baipiao-api/service"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,15 +1,15 @@
 package controller
 
 import (
+	"baipiao-api/common"
+	"baipiao-api/model"
+	"baipiao-api/setting"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting"
 	"io"
 	"log"
 	"net/http"
