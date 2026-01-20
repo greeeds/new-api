@@ -5,13 +5,14 @@ import (
 
 	"baipiao-api/common"
 	"baipiao-api/logger"
+	"baipiao-api/types"
 	"github.com/gin-gonic/gin"
 )
 
-func abortWithOpenAiMessage(c *gin.Context, statusCode int, message string, code ...string) {
+func abortWithOpenAiMessage(c *gin.Context, statusCode int, message string, code ...types.ErrorCode) {
 	codeStr := ""
 	if len(code) > 0 {
-		codeStr = code[0]
+		codeStr = string(code[0])
 	}
 	userId := c.GetInt("id")
 	c.JSON(statusCode, gin.H{

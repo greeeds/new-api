@@ -11,6 +11,7 @@ import (
 	"baipiao-api/relay/channel/baidu_v2"
 	"baipiao-api/relay/channel/claude"
 	"baipiao-api/relay/channel/cloudflare"
+	"baipiao-api/relay/channel/codex"
 	"baipiao-api/relay/channel/cohere"
 	"baipiao-api/relay/channel/coze"
 	"baipiao-api/relay/channel/deepseek"
@@ -117,6 +118,8 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &minimax.Adaptor{}
 	case constant.APITypeReplicate:
 		return &replicate.Adaptor{}
+	case constant.APITypeCodex:
+		return &codex.Adaptor{}
 	}
 	return nil
 }
@@ -148,7 +151,7 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 			return &taskvertex.TaskAdaptor{}
 		case constant.ChannelTypeVidu:
 			return &taskVidu.TaskAdaptor{}
-		case constant.ChannelTypeDoubaoVideo:
+		case constant.ChannelTypeDoubaoVideo, constant.ChannelTypeVolcEngine:
 			return &taskdoubao.TaskAdaptor{}
 		case constant.ChannelTypeSora, constant.ChannelTypeOpenAI:
 			return &tasksora.TaskAdaptor{}

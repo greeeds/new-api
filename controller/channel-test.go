@@ -97,6 +97,11 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 		if channel.Type == constant.ChannelTypeVolcEngine && strings.Contains(testModel, "seedream") {
 			requestPath = "/v1/images/generations"
 		}
+
+		// responses-only models
+		if strings.Contains(strings.ToLower(testModel), "codex") {
+			requestPath = "/v1/responses"
+		}
 	}
 
 	c.Request = &http.Request{
@@ -177,7 +182,7 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 		}
 	}
 
-	request := buildTestRequest(testModel, endpointType)
+	request := buildTestRequest(testModel, endpointType, channel)
 
 	info, err := relaycommon.GenRelayInfo(c, relayFormat, request, nil)
 
@@ -189,6 +194,7 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 		}
 	}
 
+	info.IsChannelTest = true
 	info.InitChannelMeta(c)
 
 	err = helper.ModelMappedHelper(c, info, request)
@@ -305,6 +311,27 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 			newAPIError: types.NewError(err, types.ErrorCodeJsonMarshalFailed),
 		}
 	}
+
+	//jsonData, err = relaycommon.RemoveDisabledFields(jsonData, info.ChannelOtherSettings)
+	//if err != nil {
+	//	return testResult{
+	//		context:     c,
+	//		localErr:    err,
+	//		newAPIError: types.NewError(err, types.ErrorCodeConvertRequestFailed),
+	//	}
+	//}
+
+	if len(info.ParamOverride) > 0 {
+		jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
+		if err != nil {
+			return testResult{
+				context:     c,
+				localErr:    err,
+				newAPIError: types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid),
+			}
+		}
+	}
+
 	var bodyContent = string(jsonData)
 	requestBody := bytes.NewBuffer(jsonData)
 	c.Request.Body = io.NopCloser(requestBody)
@@ -321,6 +348,16 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 		httpResp = resp.(*http.Response)
 		if httpResp.StatusCode != http.StatusOK {
 			err := service.RelayErrorHandler(c.Request.Context(), httpResp, true)
+			common.SysError(fmt.Sprintf(
+				"channel test bad response: channel_id=%d name=%s type=%d model=%s endpoint_type=%s status=%d err=%v",
+				channel.Id,
+				channel.Name,
+				channel.Type,
+				testModel,
+				endpointType,
+				httpResp.StatusCode,
+				err,
+			))
 			return testResult{
 				context:     c,
 				localErr:    err,
@@ -392,7 +429,7 @@ func testChannel(channel *model.Channel, testModel string, endpointType string) 
 	}
 }
 
-func buildTestRequest(model string, endpointType string) dto.Request {
+func buildTestRequest(model string, endpointType string, channel *model.Channel) dto.Request {
 	// 根据端点类型构建不同的测试请求
 	if endpointType != "" {
 		switch constant.EndpointType(endpointType) {
@@ -426,7 +463,7 @@ func buildTestRequest(model string, endpointType string) dto.Request {
 			}
 		case constant.EndpointTypeAnthropic, constant.EndpointTypeGemini, constant.EndpointTypeOpenAI:
 			// 返回 GeneralOpenAIRequest
-			maxTokens := uint(10)
+			maxTokens := uint(16)
 			if constant.EndpointType(endpointType) == constant.EndpointTypeGemini {
 				maxTokens = 3000
 			}
@@ -456,6 +493,14 @@ func buildTestRequest(model string, endpointType string) dto.Request {
 		}
 	}
 
+	// Responses-only models (e.g. codex series)
+	if strings.Contains(strings.ToLower(model), "codex") {
+		return &dto.OpenAIResponsesRequest{
+			Model: model,
+			Input: json.RawMessage("\"hi\""),
+		}
+	}
+
 	// Chat/Completion 请求 - 返回 GeneralOpenAIRequest
 	testRequest := &dto.GeneralOpenAIRequest{
 		Model:  model,
@@ -469,7 +514,7 @@ func buildTestRequest(model string, endpointType string) dto.Request {
 	}
 
 	if strings.HasPrefix(model, "o") {
-		testRequest.MaxCompletionTokens = 10
+		testRequest.MaxCompletionTokens = 16
 	} else if strings.Contains(model, "thinking") {
 		if !strings.Contains(model, "claude") {
 			testRequest.MaxTokens = 50
@@ -477,7 +522,7 @@ func buildTestRequest(model string, endpointType string) dto.Request {
 	} else if strings.Contains(model, "gemini") {
 		testRequest.MaxTokens = 3000
 	} else {
-		testRequest.MaxTokens = 10
+		testRequest.MaxTokens = 16
 	}
 
 	return testRequest

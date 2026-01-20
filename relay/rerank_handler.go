@@ -6,15 +6,15 @@ import (
 	"io"
 	"net/http"
 
-"baipiao-api/common"
-"baipiao-api/dto"
-relaycommon "baipiao-api/relay/common"
-"baipiao-api/relay/helper"
-"baipiao-api/service"
-"baipiao-api/setting/model_setting"
-"baipiao-api/types"
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/dto"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relay/helper"
+	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/model_setting"
+	"github.com/QuantumNous/new-api/types"
 
-"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 func RerankHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
@@ -110,6 +110,6 @@ func RerankHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
 		return newAPIError
 	}
-	postConsumeQuota(c, info, usage.(*dto.Usage), "", bodyContent)
+	postConsumeQuota(c, info, usage.(*dto.Usage), bodyContent)
 	return nil
 }

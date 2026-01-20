@@ -13,6 +13,7 @@ import (
 	relaycommon "baipiao-api/relay/common"
 	"baipiao-api/relay/constant"
 	"baipiao-api/setting/model_setting"
+	"baipiao-api/setting/reasoning"
 	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -137,7 +138,7 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 			info.UpstreamModelName = strings.TrimSuffix(info.UpstreamModelName, "-thinking")
 		} else if strings.HasSuffix(info.UpstreamModelName, "-nothinking") {
 			info.UpstreamModelName = strings.TrimSuffix(info.UpstreamModelName, "-nothinking")
-		} else if baseModel, level := parseThinkingLevelSuffix(info.UpstreamModelName); level != "" {
+		} else if baseModel, level, ok := reasoning.TrimEffortSuffix(info.UpstreamModelName); ok && level != "" {
 			info.UpstreamModelName = baseModel
 		}
 	}

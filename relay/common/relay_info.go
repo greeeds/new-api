@@ -11,6 +11,7 @@ import (
 	"baipiao-api/constant"
 	"baipiao-api/dto"
 	relayconstant "baipiao-api/relay/constant"
+	"baipiao-api/setting/model_setting"
 	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -114,6 +115,7 @@ type RelayInfo struct {
 	SendResponseCount      int
 	FinalPreConsumedQuota  int  // 最终预消耗的配额
 	IsClaudeBetaQuery      bool // /v1/messages?beta=true
+	IsChannelTest          bool // channel test request
 
 	PriceData types.PriceData
 
@@ -272,6 +274,7 @@ var streamSupportedChannels = map[int]bool{
 	constant.ChannelTypeZhipu_v4:   true,
 	constant.ChannelTypeAli:        true,
 	constant.ChannelTypeSubmodel:   true,
+	constant.ChannelTypeCodex:      true,
 }
 
 func GenRelayInfoWs(c *gin.Context, ws *websocket.Conn) *RelayInfo {
@@ -630,6 +633,50 @@ func RemoveDisabledFields(jsonData []byte, channelOtherSettings dto.ChannelOther
 	jsonDataAfter, err := common.Marshal(data)
 	if err != nil {
 		common.SysError("RemoveDisabledFields Marshal error :" + err.Error())
+		return jsonData, nil
+	}
+	return jsonDataAfter, nil
+}
+
+// RemoveGeminiDisabledFields removes disabled fields from Gemini request JSON data
+// Currently supports removing functionResponse.id field which Vertex AI does not support
+func RemoveGeminiDisabledFields(jsonData []byte) ([]byte, error) {
+	if !model_setting.GetGeminiSettings().RemoveFunctionResponseIdEnabled {
+		return jsonData, nil
+	}
+
+	var data map[string]interface{}
+	if err := common.Unmarshal(jsonData, &data); err != nil {
+		common.SysError("RemoveGeminiDisabledFields Unmarshal error: " + err.Error())
+		return jsonData, nil
+	}
+
+	// Process contents array
+	// Handle both camelCase (functionResponse) and snake_case (function_response)
+	if contents, ok := data["contents"].([]interface{}); ok {
+		for _, content := range contents {
+			if contentMap, ok := content.(map[string]interface{}); ok {
+				if parts, ok := contentMap["parts"].([]interface{}); ok {
+					for _, part := range parts {
+						if partMap, ok := part.(map[string]interface{}); ok {
+							// Check functionResponse (camelCase)
+							if funcResp, ok := partMap["functionResponse"].(map[string]interface{}); ok {
+								delete(funcResp, "id")
+							}
+							// Check function_response (snake_case)
+							if funcResp, ok := partMap["function_response"].(map[string]interface{}); ok {
+								delete(funcResp, "id")
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	jsonDataAfter, err := common.Marshal(data)
+	if err != nil {
+		common.SysError("RemoveGeminiDisabledFields Marshal error: " + err.Error())
 		return jsonData, nil
 	}
 	return jsonDataAfter, nil
