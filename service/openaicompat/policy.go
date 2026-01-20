@@ -1,6 +1,6 @@
 package openaicompat
 
-import "github.com/QuantumNous/new-api/setting/model_setting"
+import "baipiao-api/setting/model_setting"
 
 func ShouldChatCompletionsUseResponsesPolicy(policy model_setting.ChatCompletionsToResponsesPolicy, channelID int, model string) bool {
 	if !policy.IsChannelEnabled(channelID) {

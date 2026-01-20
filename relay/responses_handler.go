@@ -24,26 +24,26 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	responsesReq, ok := info.Request.(*dto.OpenAIResponsesRequest)
 	if !ok {
 		newApiErr := types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.OpenAIResponsesRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 
 	request, err := common.DeepCopy(responsesReq)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), "")
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(fmt.Errorf("failed to copy request to GeneralOpenAIRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), "")
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
 		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 	adaptor.Init(info)
@@ -52,7 +52,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), "")
+			postConsumeQuota(c, info, nil, "", err.Error())
 			return types.NewError(err, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
 		}
 		bodyContent = string(body)
@@ -60,12 +60,12 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	} else {
 		convertedRequest, err := adaptor.ConvertOpenAIResponsesRequest(c, info, *request)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), "")
+			postConsumeQuota(c, info, nil, "", err.Error())
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 		jsonData, err := common.Marshal(convertedRequest)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), "")
+			postConsumeQuota(c, info, nil, "", err.Error())
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 
@@ -79,7 +79,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
 			if err != nil {
-				postConsumeQuota(c, info, nil, err.Error(), "")
+				postConsumeQuota(c, info, nil, "", err.Error())
 				return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
 			}
 		}
@@ -94,7 +94,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, err.Error())
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 
@@ -107,7 +107,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, newAPIError.Err.Error())
 			return newAPIError
 		}
 	}
@@ -116,7 +116,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	if newAPIError != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-		postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, newAPIError.Err.Error())
 		return newAPIError
 	}
 

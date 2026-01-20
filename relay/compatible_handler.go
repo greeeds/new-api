@@ -33,13 +33,13 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	textReq, ok := info.Request.(*dto.GeneralOpenAIRequest)
 	if !ok {
 		newApiErr := types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.GeneralOpenAIRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error())
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 
 	request, err := common.DeepCopy(textReq)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error())
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(fmt.Errorf("failed to copy request to GeneralOpenAIRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
@@ -49,7 +49,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error())
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
@@ -76,7 +76,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
 		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error())
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 	adaptor.Init(info)
@@ -89,7 +89,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		applySystemPromptIfNeeded(c, info, request)
 		usage, newApiErr := chatCompletionsViaResponses(c, info, adaptor, request)
 		if newApiErr != nil {
-			postConsumeQuota(c, info, nil, newApiErr.Err.Error())
+			postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 			return newApiErr
 		}
 
@@ -109,7 +109,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	if passThroughGlobal || info.ChannelSetting.PassThroughBodyEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, err.Error())
 			return types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		if common.DebugEnabled {
@@ -120,7 +120,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	} else {
 		convertedRequest, err := adaptor.ConvertOpenAIRequest(c, info, request)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, err.Error())
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 
@@ -168,7 +168,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 
 		jsonData, err := common.Marshal(convertedRequest)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, err.Error())
 			return types.NewError(err, types.ErrorCodeJsonMarshalFailed, types.ErrOptionWithSkipRetry())
 		}
 
@@ -182,7 +182,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
 			if err != nil {
-				postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+				postConsumeQuota(c, info, nil, bodyContent, err.Error())
 				return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
 			}
 		}
@@ -195,7 +195,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, err.Error())
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 
@@ -208,7 +208,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 			newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
-			postConsumeQuota(c, info, nil, newApiErr.Err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, newApiErr.Err.Error())
 			return newApiErr
 		}
 	}
@@ -217,7 +217,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	if newApiErr != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newApiErr, statusCodeMappingStr)
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, newApiErr.Err.Error())
 		return newApiErr
 	}
 

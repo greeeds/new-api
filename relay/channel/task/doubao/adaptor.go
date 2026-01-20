@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
+	"baipiao-api/common"
 
 	"baipiao-api/constant"
 	"baipiao-api/dto"

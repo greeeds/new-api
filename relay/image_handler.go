@@ -26,26 +26,26 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	imageReq, ok := info.Request.(*dto.ImageRequest)
 	if !ok {
 		newApiErr := types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.ImageRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 
 	request, err := common.DeepCopy(imageReq)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), "")
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(fmt.Errorf("failed to copy request to ImageRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), "")
+		postConsumeQuota(c, info, nil, "", err.Error())
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
 		newApiErr := types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
-		postConsumeQuota(c, info, nil, newApiErr.Err.Error(), "")
+		postConsumeQuota(c, info, nil, "", newApiErr.Err.Error())
 		return newApiErr
 	}
 	adaptor.Init(info)
@@ -55,7 +55,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, err.Error())
 			return types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		requestBody = bytes.NewBuffer(body)
@@ -63,7 +63,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	} else {
 		convertedRequest, err := adaptor.ConvertImageRequest(c, info, *request)
 		if err != nil {
-			postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+			postConsumeQuota(c, info, nil, bodyContent, err.Error())
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed)
 		}
 
@@ -77,7 +77,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 		default:
 			jsonData, err := common.Marshal(convertedRequest)
 			if err != nil {
-				postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+				postConsumeQuota(c, info, nil, bodyContent, err.Error())
 				return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 			}
 
@@ -85,7 +85,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 			if len(info.ParamOverride) > 0 {
 				jsonData, err = relaycommon.ApplyParamOverride(jsonData, info.ParamOverride, relaycommon.BuildParamOverrideContext(info))
 				if err != nil {
-					postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+					postConsumeQuota(c, info, nil, bodyContent, err.Error())
 					return types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
 				}
 			}
@@ -102,7 +102,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
-		postConsumeQuota(c, info, nil, err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, err.Error())
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 	var httpResp *http.Response
@@ -127,7 +127,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	if newAPIError != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-		postConsumeQuota(c, info, nil, newAPIError.Err.Error(), bodyContent)
+		postConsumeQuota(c, info, nil, bodyContent, newAPIError.Err.Error())
 		return newAPIError
 	}
 

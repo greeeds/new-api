@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/openai"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	relayconstant "github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/types"
+	"baipiao-api/common"
+	"baipiao-api/dto"
+	"baipiao-api/relay/channel"
+	"baipiao-api/relay/channel/openai"
+	relaycommon "baipiao-api/relay/common"
+	relayconstant "baipiao-api/relay/constant"
+	"baipiao-api/types"
 
 	"github.com/gin-gonic/gin"
 )
